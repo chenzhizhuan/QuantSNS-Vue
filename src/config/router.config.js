@@ -43,15 +43,28 @@ export const asyncRouterMap = [
           indicatorSignalOnly: true
         }
       },
-      // Python 脚本策略（无侧栏入口，从「交易机器人」进入）
+      // Python 脚本策略 — kept reachable only via the "Clone as Script"
+      // button on the Trading Bot detail page and via deep links like
+      // `/strategy-script?strategy_id=...&mode=edit`. We re-hide it from
+      // the sidebar so that:
+      //   1. Casual users don't see two near-duplicate strategy entries
+      //      (Trading Bot + Script Strategies) and get confused about
+      //      which one to start with.
+      //   2. Power users can still land on this page directly when they
+      //      explicitly opt in via the clone flow on a bot they already
+      //      own. The route + view stay, only its prominence drops.
+      // If you're tempted to flip `hidden: true` back, please also re-check
+      // the discoverability promise in `views/trading-bot/index.vue`.
       {
         path: '/strategy-script',
         name: 'StrategyScript',
         component: () => import('@/views/trading-assistant'),
         hidden: true,
         meta: {
-          title: 'menu.dashboard.tradingBot',
+          title: 'menu.dashboard.scriptStrategies',
           keepAlive: false,
+          icon: 'code-sandbox',
+          permission: ['dashboard'],
           scriptStrategiesOnly: true
         }
       },
