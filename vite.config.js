@@ -2,8 +2,6 @@ import { defineConfig, loadEnv } from 'vite'
 import vue2 from '@vitejs/plugin-vue2'
 import vue2Jsx from '@vitejs/plugin-vue2-jsx'
 import svgLoader from 'vite-svg-loader'
-import Components from 'unplugin-vue-components/vite'
-import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 import { viteMockServe } from 'vite-plugin-mock'
 import { fileURLToPath, URL } from 'node:url'
 import { execSync } from 'node:child_process'
@@ -28,12 +26,16 @@ export default defineConfig(({ mode }) => {
   return {
     base: './',
     resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
-        '@$': fileURLToPath(new URL('./src', import.meta.url)),
+      alias: [
+        // webpack 风格的 ~package/... less @import → 直接命中 node_modules
+        { find: /^~(.+)/, replacement: '$1' },
         // pro-layout 1.x 仍引用 webpack 专用插件 client，用 shim 兼容
-        'webpack-theme-color-replacer/client': fileURLToPath(new URL('./src/shims/webpack-theme-color-replacer-client.js', import.meta.url))
-      }
+        { find: 'webpack-theme-color-replacer/client', replacement: fileURLToPath(new URL('./src/shims/webpack-theme-color-replacer-client.js', import.meta.url)) },
+        { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+        { find: '@$', replacement: fileURLToPath(new URL('./src', import.meta.url)) }
+      ],
+      // 兼容旧代码中省略 .vue 后缀的 import（如 `import App from './App'`）
+      extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', '.vue']
     },
     define: {
       APP_VERSION: JSON.stringify(pkg.version),
@@ -61,15 +63,6 @@ export default defineConfig(({ mode }) => {
       vue2(),
       vue2Jsx(),
       svgLoader({ defaultImport: 'url' }),
-      Components({
-        dts: false,
-        resolvers: [
-          AntDesignVueResolver({
-            resolveIcons: true,
-            importStyle: 'less'
-          })
-        ]
-      }),
       viteMockServe({
         mockPath: 'src/mock/services',
         enable: enableMock,
