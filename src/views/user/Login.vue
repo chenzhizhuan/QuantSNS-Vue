@@ -1,7 +1,7 @@
 <template>
   <div class="main">
     <div class="auth-intro">
-      <div class="desc">AI driven quantitative insights for global markets</div>
+      <div class="desc">{{ $t('user.login.subtitle') || 'AI driven quantitative insights for global markets' }}</div>
     </div>
 
     <div class="auth-card">

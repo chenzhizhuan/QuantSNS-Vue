@@ -892,7 +892,7 @@ const locale = {
   'user.login.oauth.loading': 'Redirecting to authorization page...',
   'user.login.oauth.failed': 'OAuth login failed',
   'user.login.oauth.get-url-failed': 'Failed to get authorization URL',
-  'user.login.subtitle': 'driven quantitative insights for global markets',
+  'user.login.subtitle': 'AI driven quantitative insights for global markets',
   'user.login.legal.title': 'Legal Disclaimer',
   'user.login.legal.view': 'View Legal Disclaimer',
   'user.login.legal.collapse': 'Hide Legal Disclaimer',

@@ -929,7 +929,7 @@ const locale = {
   'user.login.oauth.loading': '正在跳转到授权页面...',
   'user.login.oauth.failed': 'OAuth 登录失败',
   'user.login.oauth.get-url-failed': '获取授权链接失败',
-  'user.login.subtitle': '驱动的全球市场量化洞察',
+  'user.login.subtitle': 'AI 驱动的全球市场量化洞察',
   'user.login.legal.title': '法律免责声明',
   'user.login.legal.view': '查看法律免责声明',
   'user.login.legal.collapse': '收起法律免责声明',
