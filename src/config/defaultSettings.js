@@ -17,7 +17,7 @@ export const PYTHON_API_BASE_URL = process.env.VUE_APP_PYTHON_API_BASE_URL || 'h
 export default {
   /** Web UI release label (footer, docs cross-reference). */
   appVersion: '3.0.28',
-  navTheme: 'light', // theme for nav menu
+  navTheme: 'dark', // theme for nav menu
   primaryColor: '#13C2C2', // '#F5222D', // primary color of ant design
   layout: 'sidemenu', // nav menu position: `sidemenu` or `topmenu`
   contentWidth: 'Fluid', // layout of content: `Fluid` or `Fixed`, only works when layout is topmenu
@@ -27,7 +27,7 @@ export default {
   menu: {
     locale: true
   },
-  title: 'QuantDinger',
+  title: 'QuantSNS',
   pwa: false,
   iconfontUrl: '',
   production: process.env.NODE_ENV === 'production' && process.env.VUE_APP_PREVIEW !== 'true'
