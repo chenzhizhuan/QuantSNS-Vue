@@ -5,25 +5,29 @@ import moment from 'moment'
 
 // default lang
 import enUS from './lang/en-US'
+import zhCN from './lang/zh-CN'
 
 Vue.use(VueI18n)
 
-export const defaultLang = 'en-US'
+export const defaultLang = 'zh-CN'
 
 const messages = {
   'en-US': {
     ...enUS
+  },
+  'zh-CN': {
+    ...zhCN
   }
 }
 
 const i18n = new VueI18n({
   silentTranslationWarn: true,
   locale: defaultLang,
-  fallbackLocale: defaultLang,
+  fallbackLocale: 'zh-CN',
   messages
 })
 
-const loadedLanguages = [defaultLang]
+const loadedLanguages = Object.keys(messages)
 
 function setI18nLanguage (lang) {
   i18n.locale = lang
