@@ -21,6 +21,13 @@ export const asyncRouterMap = [
         component: () => import('@/views/ai-asset-analysis'),
         meta: { title: 'menu.dashboard.aiAssetAnalysis', keepAlive: true, icon: 'appstore', permission: ['dashboard'] }
       },
+      // 1.2 AI弹性选股（复刻 AI智能分析）
+      {
+        path: '/ai-elastic-stock',
+        name: 'AIElasticStock',
+        component: () => import('@/views/ai-elastic-stock'),
+        meta: { title: 'menu.dashboard.aiElasticStock', keepAlive: true, icon: 'appstore', permission: ['dashboard'] }
+      },
       // 2. 数据中心（统一入口：指标 / 脚本 / 机器人 / 回测历史）
       {
         path: '/strategy-center',
