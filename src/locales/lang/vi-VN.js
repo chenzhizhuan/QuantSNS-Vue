@@ -3424,7 +3424,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': 'Độ tin cậy',
   'aiElasticStock.signalBoard.labels.strength': 'Sức mạnh',
   'aiElasticStock.signalBoard.labels.confidence': 'Tin cậy',
-  'aiElasticStock.signalBoard.actions.addWatchlist': 'Thêm vào danh sách theo dõi',
   'aiElasticStock.signalBoard.actions.viewDetail': 'Xem chi tiết',
   'aiElasticStock.signalBoard.empty': 'Chưa có tín hiệu',
   'aiAssetAnalysis.tabs.monitor': 'Nhóm tài sản & tác vụ định kỳ',

@@ -622,7 +622,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': '置信度榜',
   'aiElasticStock.signalBoard.labels.strength': '强度',
   'aiElasticStock.signalBoard.labels.confidence': '置信度',
-  'aiElasticStock.signalBoard.actions.addWatchlist': '加入自选',
   'aiElasticStock.signalBoard.actions.viewDetail': '查看详情',
   'aiElasticStock.signalBoard.empty': '暂无信号',
   'aiAssetAnalysis.tabs.monitor': '资产池与定时任务',

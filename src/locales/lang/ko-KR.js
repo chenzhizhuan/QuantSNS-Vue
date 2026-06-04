@@ -2272,7 +2272,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': '신뢰도',
   'aiElasticStock.signalBoard.labels.strength': '강도',
   'aiElasticStock.signalBoard.labels.confidence': '신뢰도',
-  'aiElasticStock.signalBoard.actions.addWatchlist': '관심종목 추가',
   'aiElasticStock.signalBoard.actions.viewDetail': '상세 보기',
   'aiElasticStock.signalBoard.empty': '시그널이 없습니다',
   'aiAssetAnalysis.tabs.monitor': '자산 풀 및 예약 작업',

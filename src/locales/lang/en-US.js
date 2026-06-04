@@ -583,7 +583,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': 'Confidence',
   'aiElasticStock.signalBoard.labels.strength': 'Strength',
   'aiElasticStock.signalBoard.labels.confidence': 'Conf',
-  'aiElasticStock.signalBoard.actions.addWatchlist': 'Add to Watchlist',
   'aiElasticStock.signalBoard.actions.viewDetail': 'View Detail',
   'aiElasticStock.signalBoard.empty': 'No signals yet',
   'aiAssetAnalysis.tabs.monitor': 'Asset Pool & Scheduled Tasks',

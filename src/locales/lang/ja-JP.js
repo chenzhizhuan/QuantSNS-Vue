@@ -2274,7 +2274,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': '信頼度',
   'aiElasticStock.signalBoard.labels.strength': '強度',
   'aiElasticStock.signalBoard.labels.confidence': '信頼度',
-  'aiElasticStock.signalBoard.actions.addWatchlist': 'ウォッチに追加',
   'aiElasticStock.signalBoard.actions.viewDetail': '詳細を見る',
   'aiElasticStock.signalBoard.empty': 'シグナルがありません',
   'aiAssetAnalysis.tabs.monitor': '資産プールと定時タスク',

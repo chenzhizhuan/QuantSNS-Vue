@@ -2286,7 +2286,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': 'الثقة',
   'aiElasticStock.signalBoard.labels.strength': 'القوة',
   'aiElasticStock.signalBoard.labels.confidence': 'الثقة',
-  'aiElasticStock.signalBoard.actions.addWatchlist': 'إضافة للمراقبة',
   'aiElasticStock.signalBoard.actions.viewDetail': 'عرض التفاصيل',
   'aiElasticStock.signalBoard.empty': 'لا توجد إشارات',
   'aiAssetAnalysis.tabs.monitor': 'مجموعة الأصول والمهام المجدولة',

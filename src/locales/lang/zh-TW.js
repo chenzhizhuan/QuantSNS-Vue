@@ -314,7 +314,6 @@ const locale = {
 'aiElasticStock.signalBoard.tabs.confidence': '置信度榜',
 'aiElasticStock.signalBoard.labels.strength': '強度',
 'aiElasticStock.signalBoard.labels.confidence': '置信度',
-'aiElasticStock.signalBoard.actions.addWatchlist': '加入自選',
 'aiElasticStock.signalBoard.actions.viewDetail': '查看詳情',
 'aiElasticStock.signalBoard.empty': '暫無信號',
 'aiAssetAnalysis.tabs.monitor': '資產池與定時任務',

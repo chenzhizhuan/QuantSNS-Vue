@@ -2287,7 +2287,6 @@ const locale = {
   'aiElasticStock.signalBoard.tabs.confidence': 'ความเชื่อมั่น',
   'aiElasticStock.signalBoard.labels.strength': 'ความแรง',
   'aiElasticStock.signalBoard.labels.confidence': 'ความเชื่อมั่น',
-  'aiElasticStock.signalBoard.actions.addWatchlist': 'เพิ่มเข้ารายการติดตาม',
   'aiElasticStock.signalBoard.actions.viewDetail': 'ดูรายละเอียด',
   'aiElasticStock.signalBoard.empty': 'ยังไม่มีสัญญาณ',
   'aiAssetAnalysis.tabs.monitor': 'พูลสินทรัพย์และงานตามกำหนดเวลา',
