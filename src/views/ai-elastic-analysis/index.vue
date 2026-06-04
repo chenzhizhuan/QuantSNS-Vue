@@ -266,9 +266,9 @@ class="analyze-button">
                     <div class="sb-row-main">
                       <div class="sb-info-left">
                         <div class="sb-symbol-line">
+                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
                           <span class="sb-symbol">{{ item.symbol }}</span>
                           <span class="sb-name-inline" v-if="item.name && item.name !== item.symbol">{{ item.name }}</span>
-                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
                         </div>
                         <div class="sb-tags">
                           <a-tag
