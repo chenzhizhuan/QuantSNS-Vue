@@ -1638,11 +1638,16 @@ export default {
       const [market, symbol] = this.selectedSymbol.split(':')
       const language = this.$store.getters.lang || 'zh-CN'
 
+      // Find the name from the watchlist to pass it to the backend
+      const watchlistItem = (this.watchlist || []).find(item => item.market === market && item.symbol === symbol)
+      const name = watchlistItem ? watchlistItem.name : ''
+
       let keepProgress = false
       try {
         const res = await fastAnalyze({
           market: market,
           symbol: symbol,
+          name: name,
           language: language,
           timeframe: '1D',
           async_submit: true
