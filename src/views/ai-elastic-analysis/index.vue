@@ -267,9 +267,9 @@ class="analyze-button">
                       <div class="sb-info-left">
                         <div class="sb-symbol-line">
                           <span class="sb-symbol">{{ item.symbol }}</span>
+                          <span class="sb-name-inline" v-if="item.name && item.name !== item.symbol">{{ item.name }}</span>
                           <span class="sb-market">{{ getMarketName(item.market) }}</span>
                         </div>
-                        <div class="sb-name" v-if="item.name && item.name !== item.symbol">{{ item.name }}</div>
                         <div class="sb-tags">
                           <a-tag
                             :color="getDecisionColor(getSignalDecision(item))"
@@ -2869,6 +2869,15 @@ export default {
   align-items: baseline;
   gap: 5px;
   overflow: hidden;
+}
+.sb-name-inline {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
 }
 .sb-name {
   margin-top: 2px;
