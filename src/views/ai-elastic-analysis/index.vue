@@ -816,7 +816,9 @@ export default {
       signalBoardTab: 'long',
       signalBoardLoading: false,
       signalBoardRaw: [],
-      signalBoardPageSize: 200
+      signalBoardPageSize: 200,
+      signalBoardTimer: null,
+      signalBoardAutoRefreshMs: 60000
     }
   },
   computed: {
@@ -915,7 +917,9 @@ export default {
       return null
     },
     signalBoardList () {
+      const watchSet = new Set((this.watchlist || []).map(x => `${x.market}:${x.symbol}`))
       const processed = this._dedupeLatestBySymbol((this.signalBoardRaw || []).map(this._mapSignalBoardItem).filter(Boolean))
+        .filter(it => watchSet.has(`${it.market}:${it.symbol}`))
       if (this.signalBoardTab === 'confidence') {
         return processed
           .slice()
@@ -938,6 +942,7 @@ export default {
   },
   mounted () {
     this.startWatchlistPriceRefresh()
+    this.startSignalBoardAutoRefresh()
   },
   activated () {
     // keep-alive re-entry. We *don't* re-run the entire created() — we just
@@ -948,10 +953,19 @@ export default {
     if (this.watchlist && this.watchlist.length > 0) {
       this.loadWatchlistPrices()
     }
+    this.loadSignalBoard()
+    this.startSignalBoardAutoRefresh()
+  },
+  deactivated () {
+    this.stopSignalBoardAutoRefresh()
   },
   beforeDestroy () {
     if (this.watchlistPriceTimer) {
       clearInterval(this.watchlistPriceTimer)
+    }
+    if (this.signalBoardTimer) {
+      clearInterval(this.signalBoardTimer)
+      this.signalBoardTimer = null
     }
     if (this.taskPollingTimer) {
       clearInterval(this.taskPollingTimer)
@@ -966,6 +980,21 @@ export default {
       }
       this.currentTaskId = null
       this.taskPollingStartedAt = 0
+    },
+    stopSignalBoardAutoRefresh () {
+      if (this.signalBoardTimer) {
+        clearInterval(this.signalBoardTimer)
+        this.signalBoardTimer = null
+      }
+    },
+    startSignalBoardAutoRefresh () {
+      this.stopSignalBoardAutoRefresh()
+      const ms = Number(this.signalBoardAutoRefreshMs) || 60000
+      this.signalBoardTimer = setInterval(() => {
+        if (!this.signalBoardLoading) {
+          this.loadSignalBoard()
+        }
+      }, ms)
     },
     async pollTaskResult () {
       if (!this.currentTaskId) return
