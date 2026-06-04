@@ -367,6 +367,7 @@ const locale = {
 'aiAssetAnalysis.placeholder.feature3': '自選聯動分析',
 'aiAssetAnalysis.placeholder.feature3Desc': '一鍵持倉建立與智能監控',
 'aiAssetAnalysis.placeholder.quickStart': '從右側自選列表選取標的，或點擊下方快速開始',
+'aiElasticStock.placeholder.quickStart': '左側自選列表選標的，右側強勢信號榜點一下即可聯動查看',
 'aiAssetAnalysis.tabLead.quick': '適合臨時判斷：選擇標的後立刻分析並查看歷史結果。',
 'aiAssetAnalysis.tabLead.monitor': '適合持續跟蹤：維護持倉、設置監控範圍與執行頻率。',
 // AI資產分析 - 準確率看板

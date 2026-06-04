@@ -2333,6 +2333,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'ウォッチリスト連携分析',
   'aiAssetAnalysis.placeholder.feature3Desc': 'ワンクリックでポジション作成とスマート監視',
   'aiAssetAnalysis.placeholder.quickStart': '右側のウォッチリストから銘柄を選択するか、下のクイックスタートをクリックしてください',
+  'aiElasticStock.placeholder.quickStart': '左側のウォッチリストから銘柄を選択するか、右側のシグナルをクリックして連動分析を確認してください',
   'aiAssetAnalysis.tabLead.quick': '臨時の判断に適しています：銘柄を選択してすぐに分析し、過去の結果を確認できます。',
   'aiAssetAnalysis.tabLead.monitor': '継続的な追跡に適しています：ポジションを管理し、監視範囲と実行頻度を設定します。',
   'aiAssetAnalysis.stats.totalAnalyses': '分析総数',

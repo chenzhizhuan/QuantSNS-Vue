@@ -636,6 +636,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'Watchlist Synergy',
   'aiAssetAnalysis.placeholder.feature3Desc': '1-click position & smart monitoring',
   'aiAssetAnalysis.placeholder.quickStart': 'Pick a symbol from the watchlist on the right, or quick-start below',
+  'aiElasticStock.placeholder.quickStart': 'Select a symbol from the watchlist on the left, or click a signal on the right to view linked analysis',
   'fastAnalysis.multiPeriodTitle': 'Multi-horizon Forecast',
   'fastAnalysis.technicalIndicatorsTitle': 'Pro Indicator Matrix',
   'aiAssetAnalysis.tabLead.quick': 'Best for ad-hoc decisions: select a symbol and analyze immediately.',

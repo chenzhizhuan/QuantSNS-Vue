@@ -2345,6 +2345,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'تحليل التآزر في قائمة المراقبة',
   'aiAssetAnalysis.placeholder.feature3Desc': 'إنشاء مراكز بنقرة واحدة ومراقبة ذكية',
   'aiAssetAnalysis.placeholder.quickStart': 'اختر رمزًا من قائمة المراقبة على اليمين، أو ابدأ بسرعة أدناه',
+  'aiElasticStock.placeholder.quickStart': 'اختر رمزًا من قائمة المتابعة على اليسار، أو انقر على إشارة في اللوحة على اليمين لعرض التحليل المرتبط',
   'aiAssetAnalysis.tabLead.quick': 'الأفضل للقرارات الفورية: اختر رمزًا وقم بالتحليل فورًا.',
   'aiAssetAnalysis.tabLead.monitor': 'الأفضل للمتابعة المستمرة: إدارة المراكز وضبط نطاقات المراقبة/التكرار.',
   'aiAssetAnalysis.stats.totalAnalyses': 'إجمالي التحليلات',

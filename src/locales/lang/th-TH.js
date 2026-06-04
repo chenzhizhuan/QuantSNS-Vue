@@ -2346,6 +2346,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'การวิเคราะห์เชื่อมโยงรายการโปรด',
   'aiAssetAnalysis.placeholder.feature3Desc': 'สร้างตำแหน่งและติดตามอัจฉริยะด้วยคลิกเดียว',
   'aiAssetAnalysis.placeholder.quickStart': 'เลือกสัญลักษณ์จากรายการโปรดทางขวา หรือเริ่มด่วนด้านล่าง',
+  'aiElasticStock.placeholder.quickStart': 'เลือกสัญลักษณ์จากรายการโปรดทางซ้าย หรือคลิกสัญญาณทางขวาเพื่อดูการวิเคราะห์ที่เชื่อมโยง',
   'aiAssetAnalysis.tabLead.quick': 'เหมาะสำหรับการตัดสินใจเฉพาะกิจ: เลือกสัญลักษณ์และวิเคราะห์ทันที',
   'aiAssetAnalysis.tabLead.monitor': 'เหมาะสำหรับการติดตามต่อเนื่อง: จัดการตำแหน่งและตั้งค่าช่วงติดตาม/ความถี่',
   'aiAssetAnalysis.stats.totalAnalyses': 'จำนวนการวิเคราะห์ทั้งหมด',

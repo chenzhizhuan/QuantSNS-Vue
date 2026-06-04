@@ -3483,6 +3483,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'Phân tích danh mục tự chọn',
   'aiAssetAnalysis.placeholder.feature3Desc': 'Tạo lệnh một cú nhấp & giám sát thông minh',
   'aiAssetAnalysis.placeholder.quickStart': 'Chọn mã từ danh sách tự chọn bên phải, hoặc bắt đầu nhanh bên dưới',
+  'aiElasticStock.placeholder.quickStart': 'Chọn mã từ danh sách theo dõi bên trái, hoặc nhấp tín hiệu bên phải để xem phân tích liên kết',
   'aiAssetAnalysis.tabLead.quick': 'Phù hợp đánh giá tức thời: chọn mã và phân tích ngay lập tức.',
   'aiAssetAnalysis.tabLead.monitor': 'Phù hợp theo dõi liên tục: quản lý lệnh, thiết lập phạm vi và tần suất giám sát.',
   'aiAssetAnalysis.stats.totalAnalyses': 'Tổng số phân tích',

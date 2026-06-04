@@ -2331,6 +2331,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': '관심종목 연동 분석',
   'aiAssetAnalysis.placeholder.feature3Desc': '원클릭 포지션 설정 및 스마트 모니터링',
   'aiAssetAnalysis.placeholder.quickStart': '오른쪽 관심종목 목록에서 심볼을 선택하거나 아래에서 빠른 시작을 클릭하세요',
+  'aiElasticStock.placeholder.quickStart': '왼쪽 관심종목에서 심볼을 선택하거나 오른쪽 시그널을 클릭해 연동 분석을 확인하세요',
   'aiAssetAnalysis.tabLead.quick': '임시 판단에 적합: 심볼 선택 후 즉시 분석 및 과거 결과 확인',
   'aiAssetAnalysis.tabLead.monitor': '지속적 추적에 적합: 포지션 유지, 모니터링 범위 및 실행 빈도 설정',
   'aiAssetAnalysis.stats.totalAnalyses': '분석 총수',

@@ -219,7 +219,7 @@ class="analyze-button">
                       {{ $t('fastAnalysis.startAnalysis') }}
                     </a-button>
                   </div>
-                  <p class="hero-hint">{{ $t('aiAssetAnalysis.placeholder.quickStart') }}</p>
+                  <p class="hero-hint">{{ $t('aiElasticStock.placeholder.quickStart') }}</p>
                 </div>
               </div>
             </div>

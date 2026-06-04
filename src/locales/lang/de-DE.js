@@ -2396,6 +2396,7 @@ const locale = {
   'aiAssetAnalysis.placeholder.feature3': 'Watchlist-Synergie',
   'aiAssetAnalysis.placeholder.feature3Desc': 'Ein-Klick-Positionierung & intelligente Überwachung',
   'aiAssetAnalysis.placeholder.quickStart': 'Wählen Sie ein Symbol aus der Watchlist rechts oder starten Sie schnell unten',
+  'aiElasticStock.placeholder.quickStart': 'Wählen Sie links ein Symbol aus der Watchlist oder klicken Sie rechts auf ein Signal, um die verknüpfte Analyse zu sehen',
   'aiAssetAnalysis.tabLead.quick': 'Geeignet für Ad-hoc-Entscheidungen: Wählen Sie ein Symbol und analysieren Sie sofort.',
   'aiAssetAnalysis.tabLead.monitor': 'Geeignet für kontinuierliche Verfolgung: Verwalten Sie Positionen und legen Sie Überwachungsbereiche/Frequenz fest.',
   'aiAssetAnalysis.stats.totalAnalyses': 'Gesamtanalysen',
