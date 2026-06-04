@@ -235,6 +235,91 @@ class="analyze-button">
             />
           </div>
         </div>
+
+        <div class="strength-panel">
+          <div class="panel-header">
+            <span class="panel-title"><a-icon type="trophy" /> {{ $t('aiElasticStock.signalBoard.title') }}</span>
+            <span class="panel-header-actions">
+              <a-tooltip :title="$t('common.refresh')">
+                <a-icon type="reload" class="panel-header-icon" @click="loadSignalBoard" />
+              </a-tooltip>
+            </span>
+          </div>
+          <div class="strength-body">
+            <a-tabs v-model="signalBoardTab" size="small" class="strength-tabs">
+              <a-tab-pane key="long" :tab="$t('aiElasticStock.signalBoard.tabs.long')" />
+              <a-tab-pane key="short" :tab="$t('aiElasticStock.signalBoard.tabs.short')" />
+              <a-tab-pane key="confidence" :tab="$t('aiElasticStock.signalBoard.tabs.confidence')" />
+            </a-tabs>
+            <a-spin :spinning="signalBoardLoading">
+              <div class="strength-list">
+                <div
+                  v-for="item in signalBoardList"
+                  :key="`sb-${item.id}`"
+                  class="sb-card"
+                  @click="viewHistoryResult(item)"
+                >
+                  <div class="sb-card-body">
+                    <div class="sb-row-main">
+                      <div class="sb-info-left">
+                        <div class="sb-symbol-line">
+                          <span class="sb-symbol">{{ item.symbol }}</span>
+                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
+                        </div>
+                        <div class="sb-tags">
+                          <a-tag
+                            :color="getDecisionColor(getSignalDecision(item))"
+                            class="sb-tag"
+                          >
+                            {{ getSignalDecision(item) }}
+                          </a-tag>
+                          <a-tag v-if="getSignalSource(item)" color="blue" class="sb-tag">
+                            {{ getSignalSource(item) }}
+                          </a-tag>
+                        </div>
+                      </div>
+                      <div class="sb-info-right">
+                        <div class="sb-score">
+                          <span class="sb-score-label">{{ $t('aiElasticStock.signalBoard.labels.strength') }}</span>
+                          <span class="sb-score-val">{{ formatNum(getSignalStrength(item), 2) }}</span>
+                        </div>
+                        <div class="sb-score">
+                          <span class="sb-score-label">{{ $t('aiElasticStock.signalBoard.labels.confidence') }}</span>
+                          <span class="sb-score-val">{{ Number(item.confidence) || 0 }}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="sb-drivers" v-if="getSignalDrivers(item).length > 0">
+                      <div class="sb-driver" v-for="(d, idx) in getSignalDrivers(item).slice(0, 2)" :key="`${item.id}-d-${idx}`">
+                        {{ d }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="sb-card-hover-actions">
+                    <a-tooltip :title="$t('aiElasticStock.signalBoard.actions.addWatchlist')">
+                      <span
+                        class="sb-hover-btn"
+                        :class="{ disabled: isInWatchlist(item) }"
+                        @click.stop="addSignalToWatchlist(item)"
+                      >
+                        <a-icon type="star" />
+                      </span>
+                    </a-tooltip>
+                    <a-tooltip :title="$t('aiElasticStock.signalBoard.actions.viewDetail')">
+                      <span class="sb-hover-btn" @click.stop="viewHistoryResult(item)">
+                        <a-icon type="eye" />
+                      </span>
+                    </a-tooltip>
+                  </div>
+                </div>
+
+                <div v-if="!signalBoardLoading && signalBoardList.length === 0" class="strength-empty">
+                  <a-empty :description="$t('aiElasticStock.signalBoard.empty')" />
+                </div>
+              </div>
+            </a-spin>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -727,7 +812,11 @@ export default {
         name: '',
         interval_min: 240,
         notify_channels: []
-      }
+      },
+      signalBoardTab: 'long',
+      signalBoardLoading: false,
+      signalBoardRaw: [],
+      signalBoardPageSize: 200
     }
   },
   computed: {
@@ -824,6 +913,20 @@ export default {
         }
       }
       return null
+    },
+    signalBoardList () {
+      const processed = this._dedupeLatestBySymbol((this.signalBoardRaw || []).map(this._mapSignalBoardItem).filter(Boolean))
+      if (this.signalBoardTab === 'confidence') {
+        return processed
+          .slice()
+          .sort((a, b) => (Number(b.confidence) || 0) - (Number(a.confidence) || 0) || this._signalBoardInstant(b) - this._signalBoardInstant(a))
+          .slice(0, 50)
+      }
+      const want = this.signalBoardTab === 'short' ? 'SELL' : 'BUY'
+      return processed
+        .filter(it => String(this.getSignalDecision(it)).toUpperCase() === want)
+        .sort((a, b) => this.getSignalStrength(b) - this.getSignalStrength(a) || (Number(b.confidence) || 0) - (Number(a.confidence) || 0) || this._signalBoardInstant(b) - this._signalBoardInstant(a))
+        .slice(0, 50)
     }
   },
   created () {
@@ -831,6 +934,7 @@ export default {
     this.loadMarketTypes()
     this.loadWatchlist()
     this.loadPositionData()
+    this.loadSignalBoard()
   },
   mounted () {
     this.startWatchlistPriceRefresh()
@@ -881,6 +985,7 @@ export default {
             await this.viewHistoryResult(task)
           }
           this.$message.success(this.$t('dashboard.analysis.message.analysisComplete'))
+          await this.loadSignalBoard()
           await this.refreshUserInfoFromServer()
           this.analyzing = false
           this.stopTaskPolling()
@@ -909,6 +1014,106 @@ export default {
       this.taskPollingTimer = setInterval(() => {
         this.pollTaskResult()
       }, 2500)
+    },
+    async loadSignalBoard () {
+      this.signalBoardLoading = true
+      try {
+        const res = await getAllAnalysisHistory({
+          page: 1,
+          pagesize: this.signalBoardPageSize
+        })
+        if (res && res.code === 1 && res.data) {
+          this.signalBoardRaw = res.data.list || []
+        } else {
+          this.signalBoardRaw = []
+        }
+      } catch (e) {
+        this.signalBoardRaw = []
+        this.$message.error(this.$t('dashboard.analysis.message.loadHistoryFailed') || '加载历史记录失败')
+      } finally {
+        this.signalBoardLoading = false
+      }
+    },
+    _signalBoardInstant (item) {
+      const iso = item && item.created_at
+      if (!iso) return 0
+      const t = Date.parse(iso)
+      return Number.isFinite(t) ? t : 0
+    },
+    _dedupeLatestBySymbol (items) {
+      const map = new Map()
+      ;(items || []).forEach(it => {
+        if (!it) return
+        const key = `${it.market}:${it.symbol}`
+        const prev = map.get(key)
+        if (!prev) {
+          map.set(key, it)
+          return
+        }
+        if (this._signalBoardInstant(it) >= this._signalBoardInstant(prev)) {
+          map.set(key, it)
+        }
+      })
+      return Array.from(map.values())
+    },
+    _mapSignalBoardItem (item) {
+      if (!item) return null
+      const market = item.market
+      const symbol = item.symbol
+      if (!market || !symbol) return null
+      return item
+    },
+    getSignalDecision (item) {
+      const c = item && item.full_result && item.full_result.consensus
+      return (c && c.consensus_decision) ? String(c.consensus_decision).toUpperCase() : String(item.decision || 'HOLD').toUpperCase()
+    },
+    getSignalStrength (item) {
+      const c = item && item.full_result && item.full_result.consensus
+      const abs = Number(c && c.consensus_abs)
+      const conf = Number(item && item.confidence)
+      const q = Number(c && c.quality_multiplier)
+      const absVal = Number.isFinite(abs) ? abs : 0
+      const confVal = Number.isFinite(conf) ? conf : 0
+      const qVal = Number.isFinite(q) && q > 0 ? q : 1
+      return absVal * (confVal / 100) * qVal
+    },
+    getSignalSource (item) {
+      const model = item && item.full_result && item.full_result.model
+      const tf = item && item.full_result && item.full_result.timeframe
+      const s = [model, tf].filter(Boolean).join(' · ')
+      return s || ''
+    },
+    getSignalDrivers (item) {
+      const reasons = (item && item.reasons) || (item && item.full_result && item.full_result.reasons) || []
+      return Array.isArray(reasons) ? reasons.filter(Boolean) : []
+    },
+    getDecisionColor (decision) {
+      const d = String(decision || '').toUpperCase()
+      if (d === 'BUY') return 'green'
+      if (d === 'SELL') return 'red'
+      return 'blue'
+    },
+    isInWatchlist (item) {
+      const key = `${item.market}:${item.symbol}`
+      return (this.watchlist || []).some(x => `${x.market}:${x.symbol}` === key)
+    },
+    async addSignalToWatchlist (item) {
+      if (!item || this.isInWatchlist(item)) return
+      try {
+        const res = await addWatchlist({
+          userid: this.userId,
+          market: item.market,
+          symbol: item.symbol
+        })
+        if (res && res.code === 1) {
+          this.$message.success(this.$t('dashboard.analysis.message.addStockSuccess'))
+          await this.loadWatchlist()
+        } else {
+          this.$message.error(res?.msg || this.$t('dashboard.analysis.message.addStockFailed'))
+        }
+      } catch (e) {
+        this.$message.error(this.$t('dashboard.analysis.message.addStockFailed'))
+      }
     },
     watchlistSelectLabel (stock) {
       if (!stock) return ''
@@ -2490,6 +2695,203 @@ export default {
   }
 }
 
+.strength-panel {
+  width: 320px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - 200px);
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eaeef3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f0f2f5;
+    background: #fafbfc;
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      letter-spacing: -0.1px;
+      .anticon { color: #f59e0b; margin-right: 6px; }
+    }
+  }
+
+  .strength-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .strength-tabs {
+    padding: 8px 10px 0 10px;
+    ::v-deep .ant-tabs-bar { margin: 0; }
+  }
+
+  .strength-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: #d4d8dd; border-radius: 2px; }
+  }
+}
+
+.sb-card {
+  position: relative;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 3px;
+  border: 1px solid transparent;
+}
+.sb-card:hover {
+  background: #f5f7fa;
+  border-color: #e8ecf1;
+}
+.sb-card-body {
+  min-width: 0;
+}
+.sb-row-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sb-info-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.sb-symbol-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  overflow: hidden;
+}
+.sb-symbol {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-market {
+  font-size: 9px;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  padding: 1px 4px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.sb-tags {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sb-tag {
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 6px;
+}
+.sb-info-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sb-score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+.sb-score-label {
+  font-size: 10px;
+  color: #94a3b8;
+}
+.sb-score-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.sb-drivers {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sb-driver {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sb-card-hover-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: linear-gradient(90deg, transparent 0%, #f8fafc 30%);
+  border-radius: 0 8px 8px 0;
+  pointer-events: none;
+}
+.sb-card:hover .sb-card-hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sb-hover-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.sb-hover-btn:hover {
+  color: var(--primary-color, #1890ff);
+  background: #e6f7ff;
+}
+.sb-hover-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.strength-empty {
+  padding: 18px 8px;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -2560,7 +2962,13 @@ export default {
   .watchlist-panel {
     width: 100%;
     max-height: 250px;
-    order: -1;
+    order: 2;
+  }
+
+  .strength-panel {
+    width: 100%;
+    max-height: 260px;
+    order: 1;
   }
 
   .hero-stats {
@@ -2817,6 +3225,36 @@ export default {
       .wl-card.active .wl-card-hover-actions { background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--primary-color, #1890ff) 6%, transparent) 30%); }
       .watchlist-empty { color: #555; }
       .we-icon { color: #333; }
+    }
+  }
+
+  .strength-panel {
+    background: #1a1a1c;
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    .panel-header {
+      background: #141416;
+      border-bottom-color: rgba(255, 255, 255, 0.05);
+      .panel-title { color: #ccc; }
+    }
+
+    .strength-list {
+      &::-webkit-scrollbar-thumb { background: #333; }
+    }
+
+    .sb-card {
+      &:hover { background: #222224; border-color: rgba(255, 255, 255, 0.06); }
+      .sb-symbol { color: #e0e0e0; }
+      .sb-market { color: #666; background: rgba(255, 255, 255, 0.06); }
+      .sb-score-val { color: #d4d4d4; }
+      .sb-driver { color: #777; }
+    }
+    .sb-card-hover-actions {
+      background: linear-gradient(90deg, transparent 0%, #222224 30%);
+      .sb-hover-btn { background: #1a1a1c; color: #888; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+      .sb-hover-btn:hover { color: var(--primary-color, #1890ff); background: color-mix(in srgb, var(--primary-color, #1890ff) 12%, transparent); }
+      .sb-hover-btn.disabled:hover { color: #888; background: #1a1a1c; }
     }
   }
 
