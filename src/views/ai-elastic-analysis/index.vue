@@ -266,6 +266,7 @@ class="analyze-button">
                           <span class="sb-symbol">{{ item.symbol }}</span>
                           <span class="sb-market">{{ getMarketName(item.market) }}</span>
                         </div>
+                        <div class="sb-name" v-if="item.name && item.name !== item.symbol">{{ item.name }}</div>
                         <div class="sb-tags">
                           <a-tag
                             :color="getDecisionColor(getSignalDecision(item))"
@@ -296,15 +297,6 @@ class="analyze-button">
                     </div>
                   </div>
                   <div class="sb-card-hover-actions">
-                    <a-tooltip :title="$t('aiElasticStock.signalBoard.actions.addWatchlist')">
-                      <span
-                        class="sb-hover-btn"
-                        :class="{ disabled: isInWatchlist(item) }"
-                        @click.stop="addSignalToWatchlist(item)"
-                      >
-                        <a-icon type="star" />
-                      </span>
-                    </a-tooltip>
                     <a-tooltip :title="$t('aiElasticStock.signalBoard.actions.viewDetail')">
                       <span class="sb-hover-btn" @click.stop="viewHistoryResult(item)">
                         <a-icon type="eye" />
@@ -659,6 +651,9 @@ class="analyze-button">
                       {{ getMarketName(item.market) }}
                     </a-tag>
                     <strong>{{ item.symbol }}</strong>
+                    <span v-if="item.name && item.name !== item.symbol" style="margin-left: 6px; color: #666; font-size: 12px;">
+                      {{ item.name }}
+                    </span>
                     <a-tag
                       :color="item.decision === 'BUY' ? 'green' : (item.decision === 'SELL' ? 'red' : 'blue')"
                       style="margin-left: 12px;"
@@ -1121,28 +1116,6 @@ export default {
       if (d === 'BUY') return 'green'
       if (d === 'SELL') return 'red'
       return 'blue'
-    },
-    isInWatchlist (item) {
-      const key = `${item.market}:${item.symbol}`
-      return (this.watchlist || []).some(x => `${x.market}:${x.symbol}` === key)
-    },
-    async addSignalToWatchlist (item) {
-      if (!item || this.isInWatchlist(item)) return
-      try {
-        const res = await addWatchlist({
-          userid: this.userId,
-          market: item.market,
-          symbol: item.symbol
-        })
-        if (res && res.code === 1) {
-          this.$message.success(this.$t('dashboard.analysis.message.addStockSuccess'))
-          await this.loadWatchlist()
-        } else {
-          this.$message.error(res?.msg || this.$t('dashboard.analysis.message.addStockFailed'))
-        }
-      } catch (e) {
-        this.$message.error(this.$t('dashboard.analysis.message.addStockFailed'))
-      }
     },
     watchlistSelectLabel (stock) {
       if (!stock) return ''
@@ -2815,6 +2788,14 @@ export default {
   align-items: baseline;
   gap: 5px;
   overflow: hidden;
+}
+.sb-name {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sb-symbol {
   font-size: 13px;

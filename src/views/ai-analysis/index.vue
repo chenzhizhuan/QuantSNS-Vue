@@ -716,6 +716,9 @@ class="analyze-button">
                       {{ getMarketName(item.market) }}
                     </a-tag>
                     <strong>{{ item.symbol }}</strong>
+                    <span v-if="item.name && item.name !== item.symbol" style="margin-left: 6px; color: #666; font-size: 12px;">
+                      {{ item.name }}
+                    </span>
                     <a-tag
                       :color="item.decision === 'BUY' ? 'green' : (item.decision === 'SELL' ? 'red' : 'blue')"
                       style="margin-left: 12px;"
