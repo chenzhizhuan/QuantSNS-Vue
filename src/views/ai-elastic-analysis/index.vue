@@ -266,8 +266,10 @@ class="analyze-button">
                     <div class="sb-row-main">
                       <div class="sb-info-left">
                         <div class="sb-symbol-line">
-                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
-                          <span class="sb-symbol">{{ item.symbol }}</span>
+                          <a-tag :color="getMarketColor(item.market)" class="sb-market-tag">
+                            {{ getMarketName(item.market) }}
+                          </a-tag>
+                          <strong class="sb-symbol">{{ item.symbol }}</strong>
                           <span class="sb-name-inline" v-if="item.name && item.name !== item.symbol">{{ item.name }}</span>
                         </div>
                         <div class="sb-tags">
@@ -2869,6 +2871,10 @@ export default {
   align-items: baseline;
   gap: 5px;
   overflow: hidden;
+}
+.sb-market-tag {
+  margin: 0;
+  flex-shrink: 0;
 }
 .sb-name-inline {
   font-size: 11px;
