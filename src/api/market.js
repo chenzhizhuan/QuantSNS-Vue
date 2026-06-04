@@ -61,16 +61,18 @@ export function removeWatchlist (parameter) {
 
 /**
  * 获取自选股价格
- * @param parameter { watchlist: array } watchlist格式：[{market: 'USStock', symbol: 'AAPL'}, ...]
+ * @param parameter { limit?: number, offset?: number, all?: boolean } 使用服务端用户自选股（不再通过 URL 传 watchlist，避免 414）
  * @returns {*}
  */
-export function getWatchlistPrices (parameter) {
+export function getWatchlistPrices (parameter = {}) {
+  const params = {}
+  if (parameter.limit !== undefined) params.limit = parameter.limit
+  if (parameter.offset !== undefined) params.offset = parameter.offset
+  if (parameter.all !== undefined) params.all = parameter.all ? '1' : '0'
   return request({
     url: marketApi.GetWatchlistPrices,
     method: 'get',
-    params: {
-      watchlist: JSON.stringify(parameter.watchlist || [])
-    }
+    params
   })
 }
 

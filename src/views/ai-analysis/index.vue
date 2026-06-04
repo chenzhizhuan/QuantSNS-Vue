@@ -299,9 +299,9 @@ class="analyze-button">
             <a-button size="small" @click="toggleBatchMode">{{ $t('common.cancel') }}</a-button>
           </div>
 
-          <div class="watchlist-list">
+          <div class="watchlist-list" ref="watchlistList" @scroll="onWatchlistScroll">
             <div
-              v-for="stock in (watchlist || [])"
+              v-for="stock in visibleWatchlist"
               :key="`wl-${stock.market}-${stock.symbol}`"
               class="wl-card"
               :class="{ active: selectedSymbol === `${stock.market}:${stock.symbol}` }"
@@ -367,6 +367,9 @@ class="analyze-button">
                 <a-tooltip :title="$t('aiAssetAnalysis.monitor.quickTask')"><span class="wl-hover-btn" @click.stop="openMonitorModal(stock)"><a-icon type="clock-circle" /></span></a-tooltip>
                 <span class="wl-hover-btn danger" @click.stop="removeFromWatchlist(stock)"><a-icon type="delete" /></span>
               </div>
+            </div>
+            <div v-if="watchlist && watchlist.length > 0 && !watchlistAllLoaded" class="watchlist-loadmore">
+              <a-spin v-if="watchlistLoadingMore" size="small" />
             </div>
             <div v-if="!watchlist || watchlist.length === 0" class="watchlist-empty">
               <div class="we-icon"><a-icon type="star" /></div>
@@ -787,6 +790,7 @@ import { fastAnalyze, getAllAnalysisHistory, deleteAnalysisHistory } from '@/api
 import { getMarketSentiment, getMarketOverview, getMarketHeatmap, getEconomicCalendar } from '@/api/global-market'
 import FastAnalysisReport from './components/FastAnalysisReport.vue'
 import sessionCache from '@/utils/sessionCache'
+import { throttle } from 'lodash-es'
 
 // Cache keys + TTLs for the four "market overview" widgets. Numbers picked
 // from the natural update cadence of each upstream:
@@ -850,6 +854,10 @@ export default {
       loadingCalendar: false,
       watchlistPriceTimer: null,
       watchlistPrices: {},
+      watchlistPageSize: 50,
+      watchlistVisibleCount: 0,
+      watchlistLoadingMore: false,
+      watchlistScrollHandler: null,
       localUserInfo: {},
       loadingUserInfo: false,
       userId: 1,
@@ -936,6 +944,12 @@ export default {
     },
     mergedUserInfo () {
       return this.localUserInfo && this.localUserInfo.email ? this.localUserInfo : this.storeUserInfo
+    },
+    visibleWatchlist () {
+      return (this.watchlist || []).slice(0, this.watchlistVisibleCount)
+    },
+    watchlistAllLoaded () {
+      return this.watchlistVisibleCount >= (this.watchlist || []).length
     },
     watchlistTotalPnl () {
       return Object.values(this.positionSummaryMap).reduce((s, v) => s + (Number(v.pnl) || 0), 0)
@@ -1047,13 +1061,16 @@ export default {
     // because users expect those to reflect "right now".
     this.loadPositionData()
     if (this.watchlist && this.watchlist.length > 0) {
-      this.loadWatchlistPrices()
+      this.refreshWatchlistPrices()
     }
     _onIdle(() => this.loadMarketData())
   },
   beforeDestroy () {
     if (this.watchlistPriceTimer) {
       clearInterval(this.watchlistPriceTimer)
+    }
+    if (this.watchlistScrollHandler && typeof this.watchlistScrollHandler.cancel === 'function') {
+      this.watchlistScrollHandler.cancel()
     }
     if (this.taskPollingTimer) {
       clearInterval(this.taskPollingTimer)
@@ -2102,7 +2119,10 @@ export default {
             change: 0,
             changePercent: 0
           }))
-          await this.loadWatchlistPrices()
+          this.watchlistPrices = {}
+          this.watchlistVisibleCount = 0
+          this.watchlistLoadingMore = false
+          await this.loadMoreWatchlist()
         }
       } catch (error) {
         // Silent fail
@@ -2110,59 +2130,95 @@ export default {
         this.loadingWatchlist = false
       }
     },
-    async loadWatchlistPrices () {
+    async loadWatchlistPricesPage (offset, limit) {
       if (!this.watchlist || this.watchlist.length === 0) return
+      if (!limit || limit <= 0) return
 
       try {
-        const watchlistData = this.watchlist.map(item => ({
-          market: item.market,
-          symbol: item.symbol
-        }))
+        const res = await getWatchlistPrices({ offset, limit })
+        if (!(res && res.code === 1 && res.data)) return
 
-        const res = await getWatchlistPrices({
-          watchlist: watchlistData
+        const priceMap = {}
+        const nextPrices = { ...(this.watchlistPrices || {}) }
+        res.data.forEach(item => {
+          priceMap[`${item.market}-${item.symbol}`] = item
+          nextPrices[`${item.market}:${item.symbol}`] = {
+            price: item.price || 0,
+            change: item.changePercent || 0
+          }
         })
+        this.watchlistPrices = nextPrices
 
-        if (res && res.code === 1 && res.data) {
-          const priceMap = {}
-          const pricesObj = {}
-          res.data.forEach(item => {
-            priceMap[`${item.market}-${item.symbol}`] = item
-            // 同时填充 watchlistPrices 对象（使用 : 作为键）
-            pricesObj[`${item.market}:${item.symbol}`] = {
-              price: item.price || 0,
-              change: item.changePercent || 0
+        this.watchlist = this.watchlist.map(item => {
+          const key = `${item.market}-${item.symbol}`
+          const priceData = priceMap[key]
+          if (priceData) {
+            return {
+              ...item,
+              price: priceData.price || 0,
+              change: priceData.change || 0,
+              changePercent: priceData.changePercent || 0
             }
-          })
-          this.watchlistPrices = pricesObj
-
-          this.watchlist = this.watchlist.map(item => {
-            const key = `${item.market}-${item.symbol}`
-            const priceData = priceMap[key]
-            if (priceData) {
-              return {
-                ...item,
-                price: priceData.price || 0,
-                change: priceData.change || 0,
-                changePercent: priceData.changePercent || 0
-              }
-            }
-            return item
-          })
-        }
+          }
+          return item
+        })
       } catch (error) {
         // Silent fail
       }
     },
+    async loadMoreWatchlist () {
+      if (this.watchlistLoadingMore) return
+      const total = (this.watchlist || []).length
+      if (this.watchlistVisibleCount >= total) return
+
+      const offset = this.watchlistVisibleCount
+      const next = Math.min(this.watchlistPageSize, total - offset)
+      if (next <= 0) return
+
+      this.watchlistLoadingMore = true
+      this.watchlistVisibleCount += next
+      try {
+        await this.loadWatchlistPricesPage(offset, next)
+      } finally {
+        this.watchlistLoadingMore = false
+      }
+    },
+    onWatchlistScroll (e) {
+      if (this.watchlistScrollHandler) {
+        this.watchlistScrollHandler(e)
+      }
+    },
+    _handleWatchlistScroll (e) {
+      const el = e && e.target
+      if (!el) return
+      if (this.watchlistAllLoaded) return
+      if (this.watchlistLoadingMore) return
+
+      const threshold = 160
+      const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
+      if (nearBottom) {
+        this.loadMoreWatchlist()
+      }
+    },
+    async refreshWatchlistPrices () {
+      if (!this.watchlist || this.watchlist.length === 0) return
+      const limit = Math.min(Math.max(this.watchlistVisibleCount, this.watchlistPageSize), 200)
+      await this.loadWatchlistPricesPage(0, limit)
+    },
     startWatchlistPriceRefresh () {
+      if (this.watchlistScrollHandler && typeof this.watchlistScrollHandler.cancel === 'function') {
+        this.watchlistScrollHandler.cancel()
+      }
+      this.watchlistScrollHandler = throttle(this._handleWatchlistScroll.bind(this), 200)
+
       this.watchlistPriceTimer = setInterval(() => {
         if (this.watchlist && this.watchlist.length > 0) {
-          this.loadWatchlistPrices()
+          this.refreshWatchlistPrices()
         }
       }, 30000)
 
       if (this.watchlist && this.watchlist.length > 0) {
-        this.loadWatchlistPrices()
+        this.refreshWatchlistPrices()
       }
     },
     // Client-side sanity check for (market, symbol) pairs before we send them
@@ -2936,6 +2992,13 @@ export default {
 
     &::-webkit-scrollbar { width: 3px; }
     &::-webkit-scrollbar-thumb { background: #d4d8dd; border-radius: 2px; }
+
+    .watchlist-loadmore {
+      display: flex;
+      justify-content: center;
+      padding: 10px 0 14px;
+      color: #94a3b8;
+    }
 
     .watchlist-empty {
       text-align: center;
