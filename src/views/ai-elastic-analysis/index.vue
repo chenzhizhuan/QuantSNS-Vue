@@ -2441,8 +2441,14 @@ export default {
   display: flex;
   gap: 12px;
   padding: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
   min-height: 0;
+
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.6); border-radius: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
 }
 
 // 左侧面板：热力图 + 财经日历
