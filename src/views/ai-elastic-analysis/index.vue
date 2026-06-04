@@ -2738,10 +2738,24 @@ export default {
     flex-direction: column;
     min-height: 0;
     flex: 1;
+    ::v-deep .ant-spin-nested-loading {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::v-deep .ant-spin-container {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
   }
 
   .strength-tabs {
     padding: 8px 10px 0 10px;
+    overflow: visible;
     ::v-deep .ant-tabs-bar { margin: 0; }
   }
 
