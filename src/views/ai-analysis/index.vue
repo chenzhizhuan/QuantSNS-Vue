@@ -1392,6 +1392,7 @@ export default {
       if (!stock) return
       const key = `${stock.market}:${stock.symbol}`
       const interval = this.monitorForm.interval_min
+      const displayName = (stock.name || stock.symbol || '').toString()
       const notifyChannels = this.monitorForm.notify_channels || []
       const positionIds = (this.positions || [])
         .filter(p => `${p.market}:${p.symbol}` === key)
@@ -1399,10 +1400,10 @@ export default {
         .filter(Boolean)
       try {
         const res = await addMonitor({
-          name: `AI-${stock.symbol}-${interval}m`,
+          name: `AI-${displayName}[${stock.symbol}]-${interval}m`,
           position_ids: positionIds,
           monitor_type: 'ai',
-          config: { run_interval_minutes: interval, symbol: stock.symbol, market: stock.market, language: this.$store.getters.lang || this.$i18n.locale || 'en-US' },
+          config: { run_interval_minutes: interval, symbol: stock.symbol, market: stock.market, name: displayName, language: this.$store.getters.lang || this.$i18n.locale || 'en-US' },
           notification_config: { channels: notifyChannels },
           is_active: true
         })
@@ -1452,16 +1453,17 @@ export default {
         const [market, symbol] = key.split(':')
         const stock = (this.watchlist || []).find(s => s.market === market && s.symbol === symbol)
         if (!stock) continue
+        const displayName = (stock.name || symbol || '').toString()
         const positionIds = (this.positions || [])
           .filter(p => `${p.market}:${p.symbol}` === key)
           .map(p => Number(p.id))
           .filter(Boolean)
         try {
           await addMonitor({
-            name: `AI-${symbol}-${interval}m`,
+            name: `AI-${displayName}[${symbol}]-${interval}m`,
             position_ids: positionIds,
             monitor_type: 'ai',
-            config: { run_interval_minutes: interval, symbol, market, language: this.$store.getters.lang || this.$i18n.locale || 'en-US' },
+            config: { run_interval_minutes: interval, symbol, market, name: displayName, language: this.$store.getters.lang || this.$i18n.locale || 'en-US' },
             notification_config: { channels: notifyChannels },
             is_active: true
           })
