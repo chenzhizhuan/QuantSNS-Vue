@@ -303,21 +303,21 @@ class="analyze-button">
                       </div>
                     </div>
                   </div>
-                  <div class="sb-card-hover-actions">
+                  <div class="wl-card-hover-actions">
                     <a-tooltip :title="$t('aiElasticStock.signalBoard.actions.viewDetail')">
-                      <span class="sb-hover-btn" @click.stop="viewHistoryResult(item)">
+                      <span class="wl-hover-btn" @click.stop="viewHistoryResult(item)">
                         <a-icon type="eye" />
                       </span>
                     </a-tooltip>
                     <a-tooltip
-                      :title="isInWatchlistPair(item.market, item.symbol) ? '已在自选' : ($t('dashboard.analysis.watchlist.add') || '添加自选')"
+                      :title="isInWatchlistPair(item.market, item.symbol) ? '移除自选' : ($t('dashboard.analysis.watchlist.add') || '添加自选')"
                     >
                       <span
-                        class="sb-hover-btn"
-                        :class="{ disabled: isInWatchlistPair(item.market, item.symbol) || signalAddLoadingKey === `${item.market}:${String(item.symbol || '').toUpperCase()}` }"
-                        @click.stop="addToWatchlistFromSignal(item)"
+                        class="wl-hover-btn"
+                        :class="{ danger: isInWatchlistPair(item.market, item.symbol) }"
+                        @click.stop="toggleWatchlistFromSignal(item)"
                       >
-                        <a-icon type="plus" />
+                        <a-icon :type="isInWatchlistPair(item.market, item.symbol) ? 'delete' : 'plus'" />
                       </span>
                     </a-tooltip>
                   </div>
@@ -1082,10 +1082,13 @@ export default {
     },
     async addToWatchlistFromSignal (item) {
       if (!item) return
+      if (!this.userId) return
       const market = String(item.market || '')
       const symbol = String(item.symbol || '').toUpperCase()
       const name = item.name || ''
       if (!market || !symbol) return
+      const key = `${market}:${symbol}`
+      if (this.signalAddLoadingKey === key) return
       if (this.isInWatchlistPair(market, symbol)) return
       const pairErr = this._validateWatchlistPair(market, symbol)
       if (pairErr) {
@@ -1093,7 +1096,6 @@ export default {
         return
       }
 
-      const key = `${market}:${symbol}`
       this.signalAddLoadingKey = key
       try {
         const res = await addWatchlist({
@@ -1113,6 +1115,48 @@ export default {
         this.$message.error(errorMsg)
       } finally {
         if (this.signalAddLoadingKey === key) this.signalAddLoadingKey = ''
+      }
+    },
+    async removeFromWatchlistFromSignal (item) {
+      if (!item) return
+      if (!this.userId) return
+      const market = String(item.market || '')
+      const symbol = String(item.symbol || '').toUpperCase()
+      if (!market || !symbol) return
+      const key = `${market}:${symbol}`
+      if (this.signalAddLoadingKey === key) return
+
+      this.signalAddLoadingKey = key
+      try {
+        const res = await removeWatchlist({
+          userid: this.userId,
+          symbol,
+          market
+        })
+        if (res && res.code === 1) {
+          this.$message.success(this.$t('dashboard.analysis.message.removeStockSuccess'))
+          await this.loadWatchlist()
+        } else {
+          this.$message.error(res?.msg || this.$t('dashboard.analysis.message.removeStockFailed'))
+        }
+      } catch (error) {
+        this.$message.error(this.$t('dashboard.analysis.message.removeStockFailed'))
+      } finally {
+        if (this.signalAddLoadingKey === key) this.signalAddLoadingKey = ''
+      }
+    },
+    async toggleWatchlistFromSignal (item) {
+      if (!item) return
+      const market = String(item.market || '')
+      const symbol = String(item.symbol || '').toUpperCase()
+      if (!market || !symbol) return
+      const key = `${market}:${symbol}`
+      if (this.signalAddLoadingKey === key) return
+
+      if (this.isInWatchlistPair(market, symbol)) {
+        await this.removeFromWatchlistFromSignal(item)
+      } else {
+        await this.addToWatchlistFromSignal(item)
       }
     },
     _signalBoardInstant (item) {
@@ -2936,46 +2980,9 @@ export default {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.sb-card-hover-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding-right: 8px;
-  opacity: 0;
-  transition: opacity 0.15s;
-  background: linear-gradient(90deg, transparent 0%, #f8fafc 30%);
-  border-radius: 0 8px 8px 0;
-  pointer-events: none;
-}
-.sb-card:hover .sb-card-hover-actions {
+.sb-card:hover .wl-card-hover-actions {
   opacity: 1;
   pointer-events: auto;
-}
-.sb-hover-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.sb-hover-btn:hover {
-  color: var(--primary-color, #1890ff);
-  background: #e6f7ff;
-}
-.sb-hover-btn.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 .strength-empty {
   padding: 18px 8px;
@@ -3338,11 +3345,11 @@ export default {
       .sb-score-val { color: #d4d4d4; }
       .sb-driver { color: #777; }
     }
-    .sb-card-hover-actions {
+    .wl-card-hover-actions {
       background: linear-gradient(90deg, transparent 0%, #222224 30%);
-      .sb-hover-btn { background: #1a1a1c; color: #888; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-      .sb-hover-btn:hover { color: var(--primary-color, #1890ff); background: color-mix(in srgb, var(--primary-color, #1890ff) 12%, transparent); }
-      .sb-hover-btn.disabled:hover { color: #888; background: #1a1a1c; }
+      .wl-hover-btn { background: #1a1a1c; color: #888; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+      .wl-hover-btn:hover { color: var(--primary-color, #1890ff); background: color-mix(in srgb, var(--primary-color, #1890ff) 12%, transparent); }
+      .wl-hover-btn.danger:hover { color: #f87171; background: rgba(248, 113, 113, 0.1); }
     }
   }
 
