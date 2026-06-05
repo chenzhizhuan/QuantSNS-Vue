@@ -507,7 +507,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import { submitFeedback as submitFeedbackApi, getPerformanceStats } from '@/api/fast-analysis'
 
 export default {
@@ -554,20 +554,16 @@ export default {
     ...mapState({
       navTheme: state => state.app.theme
     }),
+    ...mapGetters({
+      storeUserInfo: 'userInfo'
+    }),
     analysisAtText () {
       const ts = this.result && (this.result.analysis_at || this.result.created_at || this.result.updated_at)
       if (!ts) return ''
-      const d = new Date(ts)
-      if (!Number.isFinite(d.getTime())) return ''
+      const d = this._parseInstantForDisplay(ts)
+      if (!d) return ''
       const locale = (this.$i18n && this.$i18n.locale) ? this.$i18n.locale : undefined
-      return d.toLocaleString(locale, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
+      return d.toLocaleString(locale, this._displayDateTimeLocaleOptions())
     },
     isDarkTheme () {
       return this.navTheme === 'dark' || this.navTheme === 'realdark'
@@ -862,6 +858,40 @@ export default {
     this.stopProgressTimer()
   },
   methods: {
+    _displayDateTimeLocaleOptions () {
+      const tz = String((this.storeUserInfo && this.storeUserInfo.timezone) || '').trim()
+      const base = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }
+      if (!tz) return base
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: tz }).format(new Date())
+        return { ...base, timeZone: tz }
+      } catch (e) {
+        return base
+      }
+    },
+    _parseInstantForDisplay (s) {
+      if (s === null || typeof s === 'undefined') return null
+      if (typeof s === 'number' && Number.isFinite(s)) {
+        const d = new Date(s > 1e12 ? s : s * 1000)
+        return Number.isNaN(d.getTime()) ? null : d
+      }
+      s = String(s || '').trim()
+      if (!s) return null
+      const hasTz = /[zZ]$/.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)
+      if (!hasTz) {
+        const norm = s.replace(' ', 'T')
+        s = norm.endsWith('Z') ? norm : `${norm}Z`
+      }
+      const d = new Date(s)
+      return Number.isNaN(d.getTime()) ? null : d
+    },
     formatPrice (value) {
       if (value === undefined || value === null) return '--'
       const num = parseFloat(value)
