@@ -1769,6 +1769,7 @@ export default {
             const payload = { ...res.data }
             delete payload.credits_charged
             delete payload.remaining_credits
+            payload.analysis_at = payload.analysis_at || new Date().toISOString()
             this.analysisResult = payload
             const rem = res.data.remaining_credits
             if (rem !== undefined && rem !== null) {
@@ -1836,7 +1837,7 @@ export default {
       }
       // 如果有完整结果，直接显示
       if (item.full_result) {
-        this.analysisResult = item.full_result
+        this.analysisResult = { ...item.full_result, analysis_at: item.created_at || item.updated_at || new Date().toISOString() }
         this.selectedSymbol = `${item.market}:${item.symbol}`
         this.showHistoryModal = false
         return
@@ -1874,7 +1875,8 @@ export default {
         risks: [],
         indicators: item.indicators || {},
         memory_id: item.id,
-        analysis_time_ms: 0
+        analysis_time_ms: 0,
+        analysis_at: item.created_at || item.updated_at || new Date().toISOString()
       }
       this.selectedSymbol = `${item.market}:${item.symbol}`
       this.showHistoryModal = false

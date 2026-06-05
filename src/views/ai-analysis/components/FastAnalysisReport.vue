@@ -497,8 +497,9 @@
           </a-button>
         </div>
         <div class="analysis-meta">
-          <span>{{ $t('fastAnalysis.analysisTime') }}: {{ result.analysis_time_ms }}ms</span>
           <span v-if="result.memory_id">ID: #{{ result.memory_id }}</span>
+          <span>{{ $t('fastAnalysis.analysisTime') }}: {{ result.analysis_time_ms }}ms</span>
+          <span v-if="analysisAtText">{{ analysisAtText }}</span>
         </div>
       </div>
     </div>
@@ -553,6 +554,21 @@ export default {
     ...mapState({
       navTheme: state => state.app.theme
     }),
+    analysisAtText () {
+      const ts = this.result && (this.result.analysis_at || this.result.created_at || this.result.updated_at)
+      if (!ts) return ''
+      const d = new Date(ts)
+      if (!Number.isFinite(d.getTime())) return ''
+      const locale = (this.$i18n && this.$i18n.locale) ? this.$i18n.locale : undefined
+      return d.toLocaleString(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    },
     isDarkTheme () {
       return this.navTheme === 'dark' || this.navTheme === 'realdark'
     },
