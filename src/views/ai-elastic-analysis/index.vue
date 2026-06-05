@@ -263,10 +263,17 @@ class="analyze-button">
                     <div class="sb-row-main">
                       <div class="sb-info-left">
                         <div class="sb-symbol-line">
-                          <span class="sb-symbol">{{ item.symbol }}</span>
-                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
+                          <a-tag :color="getMarketColor(item.market)" class="sb-market-tag">
+                            {{ getMarketName(item.market) }}
+                          </a-tag>
+                          <strong class="sb-symbol">{{ item.symbol }}</strong>
+                          <span
+                            class="sb-name"
+                            v-if="item.name && item.name !== item.symbol"
+                          >
+                            {{ item.name }}
+                          </span>
                         </div>
-                        <div class="sb-name" v-if="item.name && item.name !== item.symbol">{{ item.name }}</div>
                         <div class="sb-tags">
                           <a-tag
                             :color="getDecisionColor(getSignalDecision(item))"
@@ -2803,15 +2810,17 @@ export default {
 }
 .sb-symbol-line {
   display: flex;
-  align-items: baseline;
-  gap: 5px;
+  align-items: center;
+  min-width: 0;
   overflow: hidden;
 }
 .sb-name {
-  margin-top: 2px;
-  font-size: 11px;
-  color: #64748b;
+  margin-left: 6px;
+  font-size: 12px;
+  color: #666;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -2822,14 +2831,10 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
 }
-.sb-market {
-  font-size: 9px;
-  color: #94a3b8;
-  letter-spacing: 0.3px;
-  padding: 1px 4px;
-  background: #f1f5f9;
-  border-radius: 3px;
+.sb-market-tag {
+  margin-right: 8px;
   flex-shrink: 0;
 }
 .sb-tags {
@@ -3280,7 +3285,6 @@ export default {
     .sb-card {
       &:hover { background: #222224; border-color: rgba(255, 255, 255, 0.06); }
       .sb-symbol { color: #e0e0e0; }
-      .sb-market { color: #666; background: rgba(255, 255, 255, 0.06); }
       .sb-score-val { color: #d4d4d4; }
       .sb-driver { color: #777; }
     }
