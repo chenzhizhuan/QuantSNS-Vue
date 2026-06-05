@@ -309,6 +309,17 @@ class="analyze-button">
                         <a-icon type="eye" />
                       </span>
                     </a-tooltip>
+                    <a-tooltip
+                      :title="isInWatchlistPair(item.market, item.symbol) ? '已在自选' : ($t('dashboard.analysis.watchlist.add') || '添加自选')"
+                    >
+                      <span
+                        class="sb-hover-btn"
+                        :class="{ disabled: isInWatchlistPair(item.market, item.symbol) || signalAddLoadingKey === `${item.market}:${String(item.symbol || '').toUpperCase()}` }"
+                        @click.stop="addToWatchlistFromSignal(item)"
+                      >
+                        <a-icon type="plus" />
+                      </span>
+                    </a-tooltip>
                   </div>
                 </div>
 
@@ -820,7 +831,8 @@ export default {
       signalBoardRaw: [],
       signalBoardPageSize: 200,
       signalBoardTimer: null,
-      signalBoardAutoRefreshMs: 60000
+      signalBoardAutoRefreshMs: 60000,
+      signalAddLoadingKey: ''
     }
   },
   computed: {
@@ -919,9 +931,7 @@ export default {
       return null
     },
     signalBoardList () {
-      const watchSet = new Set((this.watchlist || []).map(x => `${x.market}:${x.symbol}`))
       const processed = this._dedupeLatestBySymbol((this.signalBoardRaw || []).map(this._mapSignalBoardItem).filter(Boolean))
-        .filter(it => watchSet.has(`${it.market}:${it.symbol}`))
       if (this.signalBoardTab === 'confidence') {
         return processed
           .slice()
@@ -975,6 +985,11 @@ export default {
     }
   },
   methods: {
+    isInWatchlistPair (market, symbol) {
+      const m = String(market || '')
+      const s = String(symbol || '').toUpperCase()
+      return (this.watchlist || []).some(it => String(it.market || '') === m && String(it.symbol || '').toUpperCase() === s)
+    },
     stopTaskPolling () {
       if (this.taskPollingTimer) {
         clearInterval(this.taskPollingTimer)
@@ -1063,6 +1078,41 @@ export default {
         this.$message.error(this.$t('dashboard.analysis.message.loadHistoryFailed') || '加载历史记录失败')
       } finally {
         this.signalBoardLoading = false
+      }
+    },
+    async addToWatchlistFromSignal (item) {
+      if (!item) return
+      const market = String(item.market || '')
+      const symbol = String(item.symbol || '').toUpperCase()
+      const name = item.name || ''
+      if (!market || !symbol) return
+      if (this.isInWatchlistPair(market, symbol)) return
+      const pairErr = this._validateWatchlistPair(market, symbol)
+      if (pairErr) {
+        this.$message.warning(pairErr)
+        return
+      }
+
+      const key = `${market}:${symbol}`
+      this.signalAddLoadingKey = key
+      try {
+        const res = await addWatchlist({
+          userid: this.userId,
+          market,
+          symbol,
+          name
+        })
+        if (res && res.code === 1) {
+          this.$message.success(this.$t('dashboard.analysis.message.addStockSuccess'))
+          await this.loadWatchlist()
+        } else {
+          this.$message.error(res?.msg || this.$t('dashboard.analysis.message.addStockFailed'))
+        }
+      } catch (error) {
+        const errorMsg = error?.response?.data?.msg || error?.message || this.$t('dashboard.analysis.message.addStockFailed')
+        this.$message.error(errorMsg)
+      } finally {
+        if (this.signalAddLoadingKey === key) this.signalAddLoadingKey = ''
       }
     },
     _signalBoardInstant (item) {
