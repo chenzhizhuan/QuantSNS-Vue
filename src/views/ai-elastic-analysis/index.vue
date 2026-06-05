@@ -51,9 +51,9 @@
             <a-button size="small" @click="toggleBatchMode">{{ $t('common.cancel') }}</a-button>
           </div>
 
-          <div class="watchlist-list" ref="watchlistList" @scroll="onWatchlistScroll">
+          <div class="watchlist-list">
             <div
-              v-for="stock in visibleWatchlist"
+              v-for="stock in (watchlist || [])"
               :key="`wl-${stock.market}-${stock.symbol}`"
               class="wl-card"
               :class="{ active: selectedSymbol === `${stock.market}:${stock.symbol}` }"
@@ -119,9 +119,6 @@
                 <a-tooltip :title="$t('aiAssetAnalysis.monitor.quickTask')"><span class="wl-hover-btn" @click.stop="openMonitorModal(stock)"><a-icon type="clock-circle" /></span></a-tooltip>
                 <span class="wl-hover-btn danger" @click.stop="removeFromWatchlist(stock)"><a-icon type="delete" /></span>
               </div>
-            </div>
-            <div v-if="watchlist && watchlist.length > 0 && !watchlistAllLoaded" class="watchlist-loadmore">
-              <a-spin v-if="watchlistLoadingMore" size="small" />
             </div>
             <div v-if="!watchlist || watchlist.length === 0" class="watchlist-empty">
               <div class="we-icon"><a-icon type="star" /></div>
@@ -266,12 +263,10 @@ class="analyze-button">
                     <div class="sb-row-main">
                       <div class="sb-info-left">
                         <div class="sb-symbol-line">
-                          <a-tag :color="getMarketColor(item.market)" class="sb-market-tag">
-                            {{ getMarketName(item.market) }}
-                          </a-tag>
-                          <strong class="sb-symbol">{{ item.symbol }}</strong>
-                          <span class="sb-name-inline" v-if="item.name && item.name !== item.symbol">{{ item.name }}</span>
+                          <span class="sb-symbol">{{ item.symbol }}</span>
+                          <span class="sb-market">{{ getMarketName(item.market) }}</span>
                         </div>
+                        <div class="sb-name" v-if="item.name && item.name !== item.symbol">{{ item.name }}</div>
                         <div class="sb-tags">
                           <a-tag
                             :color="getDecisionColor(getSignalDecision(item))"
@@ -725,7 +720,6 @@ import { getWatchlist, addWatchlist, removeWatchlist, getWatchlistPrices, getMar
 import { getPositions, addPosition, getMonitors, addMonitor, updateMonitor, deleteMonitor } from '@/api/portfolio'
 import { fastAnalyze, getAllAnalysisHistory, deleteAnalysisHistory } from '@/api/fast-analysis'
 import FastAnalysisReport from './components/FastAnalysisReport.vue'
-import { throttle } from 'lodash-es'
 
 export default {
   name: 'ElasticAnalysis',
@@ -750,10 +744,6 @@ export default {
     return {
       watchlistPriceTimer: null,
       watchlistPrices: {},
-      watchlistPageSize: 50,
-      watchlistVisibleCount: 0,
-      watchlistLoadingMore: false,
-      watchlistScrollHandler: null,
       localUserInfo: {},
       loadingUserInfo: false,
       userId: 1,
@@ -843,12 +833,6 @@ export default {
     },
     mergedUserInfo () {
       return this.localUserInfo && this.localUserInfo.email ? this.localUserInfo : this.storeUserInfo
-    },
-    visibleWatchlist () {
-      return (this.watchlist || []).slice(0, this.watchlistVisibleCount)
-    },
-    watchlistAllLoaded () {
-      return this.watchlistVisibleCount >= (this.watchlist || []).length
     },
     watchlistTotalPnl () {
       return Object.values(this.positionSummaryMap).reduce((s, v) => s + (Number(v.pnl) || 0), 0)
@@ -962,7 +946,7 @@ export default {
     // because users expect those to reflect "right now".
     this.loadPositionData()
     if (this.watchlist && this.watchlist.length > 0) {
-      this.refreshWatchlistPrices()
+      this.loadWatchlistPrices()
     }
     this.loadSignalBoard()
     this.startSignalBoardAutoRefresh()
@@ -973,9 +957,6 @@ export default {
   beforeDestroy () {
     if (this.watchlistPriceTimer) {
       clearInterval(this.watchlistPriceTimer)
-    }
-    if (this.watchlistScrollHandler && typeof this.watchlistScrollHandler.cancel === 'function') {
-      this.watchlistScrollHandler.cancel()
     }
     if (this.signalBoardTimer) {
       clearInterval(this.signalBoardTimer)
@@ -1875,10 +1856,7 @@ export default {
             change: 0,
             changePercent: 0
           }))
-          this.watchlistPrices = {}
-          this.watchlistVisibleCount = 0
-          this.watchlistLoadingMore = false
-          await this.loadMoreWatchlist()
+          await this.loadWatchlistPrices()
         }
       } catch (error) {
         // Silent fail
@@ -1886,95 +1864,59 @@ export default {
         this.loadingWatchlist = false
       }
     },
-    async loadWatchlistPricesPage (offset, limit) {
+    async loadWatchlistPrices () {
       if (!this.watchlist || this.watchlist.length === 0) return
-      if (!limit || limit <= 0) return
 
       try {
-        const res = await getWatchlistPrices({ offset, limit })
-        if (!(res && res.code === 1 && res.data)) return
+        const watchlistData = this.watchlist.map(item => ({
+          market: item.market,
+          symbol: item.symbol
+        }))
 
-        const priceMap = {}
-        const nextPrices = { ...(this.watchlistPrices || {}) }
-        res.data.forEach(item => {
-          priceMap[`${item.market}-${item.symbol}`] = item
-          nextPrices[`${item.market}:${item.symbol}`] = {
-            price: item.price || 0,
-            change: item.changePercent || 0
-          }
+        const res = await getWatchlistPrices({
+          watchlist: watchlistData
         })
-        this.watchlistPrices = nextPrices
 
-        this.watchlist = this.watchlist.map(item => {
-          const key = `${item.market}-${item.symbol}`
-          const priceData = priceMap[key]
-          if (priceData) {
-            return {
-              ...item,
-              price: priceData.price || 0,
-              change: priceData.change || 0,
-              changePercent: priceData.changePercent || 0
+        if (res && res.code === 1 && res.data) {
+          const priceMap = {}
+          const pricesObj = {}
+          res.data.forEach(item => {
+            priceMap[`${item.market}-${item.symbol}`] = item
+            // 同时填充 watchlistPrices 对象（使用 : 作为键）
+            pricesObj[`${item.market}:${item.symbol}`] = {
+              price: item.price || 0,
+              change: item.changePercent || 0
             }
-          }
-          return item
-        })
+          })
+          this.watchlistPrices = pricesObj
+
+          this.watchlist = this.watchlist.map(item => {
+            const key = `${item.market}-${item.symbol}`
+            const priceData = priceMap[key]
+            if (priceData) {
+              return {
+                ...item,
+                price: priceData.price || 0,
+                change: priceData.change || 0,
+                changePercent: priceData.changePercent || 0
+              }
+            }
+            return item
+          })
+        }
       } catch (error) {
         // Silent fail
       }
     },
-    async loadMoreWatchlist () {
-      if (this.watchlistLoadingMore) return
-      const total = (this.watchlist || []).length
-      if (this.watchlistVisibleCount >= total) return
-
-      const offset = this.watchlistVisibleCount
-      const next = Math.min(this.watchlistPageSize, total - offset)
-      if (next <= 0) return
-
-      this.watchlistLoadingMore = true
-      this.watchlistVisibleCount += next
-      try {
-        await this.loadWatchlistPricesPage(offset, next)
-      } finally {
-        this.watchlistLoadingMore = false
-      }
-    },
-    onWatchlistScroll (e) {
-      if (this.watchlistScrollHandler) {
-        this.watchlistScrollHandler(e)
-      }
-    },
-    _handleWatchlistScroll (e) {
-      const el = e && e.target
-      if (!el) return
-      if (this.watchlistAllLoaded) return
-      if (this.watchlistLoadingMore) return
-
-      const threshold = 160
-      const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
-      if (nearBottom) {
-        this.loadMoreWatchlist()
-      }
-    },
-    async refreshWatchlistPrices () {
-      if (!this.watchlist || this.watchlist.length === 0) return
-      const limit = Math.min(Math.max(this.watchlistVisibleCount, this.watchlistPageSize), 200)
-      await this.loadWatchlistPricesPage(0, limit)
-    },
     startWatchlistPriceRefresh () {
-      if (this.watchlistScrollHandler && typeof this.watchlistScrollHandler.cancel === 'function') {
-        this.watchlistScrollHandler.cancel()
-      }
-      this.watchlistScrollHandler = throttle(this._handleWatchlistScroll.bind(this), 200)
-
       this.watchlistPriceTimer = setInterval(() => {
         if (this.watchlist && this.watchlist.length > 0) {
-          this.refreshWatchlistPrices()
+          this.loadWatchlistPrices()
         }
       }, 30000)
 
       if (this.watchlist && this.watchlist.length > 0) {
-        this.refreshWatchlistPrices()
+        this.loadWatchlistPrices()
       }
     },
     // Client-side sanity check for (market, symbol) pairs before we send them
@@ -2755,13 +2697,6 @@ export default {
     &::-webkit-scrollbar { width: 3px; }
     &::-webkit-scrollbar-thumb { background: #d4d8dd; border-radius: 2px; }
 
-    .watchlist-loadmore {
-      display: flex;
-      justify-content: center;
-      padding: 10px 0 14px;
-      color: #94a3b8;
-    }
-
     .watchlist-empty {
       text-align: center;
       padding: 24px 12px;
@@ -2871,19 +2806,6 @@ export default {
   align-items: baseline;
   gap: 5px;
   overflow: hidden;
-}
-.sb-market-tag {
-  margin: 0;
-  flex-shrink: 0;
-}
-.sb-name-inline {
-  font-size: 11px;
-  color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex: 1;
 }
 .sb-name {
   margin-top: 2px;
