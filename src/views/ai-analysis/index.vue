@@ -850,11 +850,15 @@ export default {
       loadingCalendar: false,
       watchlistPriceTimer: null,
       watchlistPrices: {},
+      watchlistPricesLastAt: 0,
       localUserInfo: {},
       loadingUserInfo: false,
       userId: 1,
       watchlist: [],
       loadingWatchlist: false,
+      loadingWatchlistPrices: false,
+      bootstrapping: false,
+      bootstrapped: false,
       showAddStockModal: false,
       addingStock: false,
       selectedSymbol: undefined,
@@ -1025,9 +1029,8 @@ export default {
     //    drive subsequent UI (e.g. the watchlist selector). Watchlist +
     //    positions are user-specific and immediately visible, so they
     //    stay on the eager path.
-    this.loadUserInfo()
+    this.bootstrapUserContext()
     this.loadMarketTypes()
-    this.loadWatchlist()
     this.loadPositionData()
 
     // 3. Deferred path: the heavy "market overview" pulls (sentiment /
@@ -1061,6 +1064,32 @@ export default {
     }
   },
   methods: {
+    /**
+     * 启动页关键链路：先加载用户信息（拿到 userId），再加载 watchlist。
+     * 这是“单一入口编排”，避免 created() 与 loadUserInfo() 内部同时触发 loadWatchlist()
+     * 导致 /api/market/watchlist/prices 双请求。
+     */
+    async bootstrapUserContext () {
+      if (this.bootstrapping || this.bootstrapped) return
+      this.bootstrapping = true
+      try {
+        await this.loadUserInfo()
+        await this.loadWatchlist()
+        this.bootstrapped = true
+      } finally {
+        this.bootstrapping = false
+      }
+    },
+
+    /**
+     * 判断是否应该刷新 watchlist prices，用于抑制“刚请求完又被 mounted/activated 触发”的重复请求。
+     */
+    _shouldRefreshWatchlistPrices (minGapMs = 1500) {
+      const last = Number(this.watchlistPricesLastAt || 0)
+      if (!last) return true
+      return (Date.now() - last) > Number(minGapMs || 0)
+    },
+
     stopTaskPolling () {
       if (this.taskPollingTimer) {
         clearInterval(this.taskPollingTimer)
@@ -2077,8 +2106,6 @@ export default {
         if (this.storeUserInfo && this.storeUserInfo.email) {
           this.localUserInfo = this.storeUserInfo
           this.userId = this.storeUserInfo.id
-          this.loadingUserInfo = false
-          this.loadWatchlist()
           return
         }
         const res = await getUserInfo()
@@ -2086,7 +2113,6 @@ export default {
           this.localUserInfo = res.data
           this.userId = res.data.id
           this.$store.commit('SET_INFO', res.data)
-          this.loadWatchlist()
         }
       } catch (error) {
         // Silent fail
@@ -2096,6 +2122,7 @@ export default {
     },
     async loadWatchlist () {
       if (!this.userId) return
+      if (this.loadingWatchlist) return
       this.loadingWatchlist = true
       try {
         const res = await getWatchlist({ userid: this.userId })
@@ -2106,7 +2133,7 @@ export default {
             change: 0,
             changePercent: 0
           }))
-          await this.loadWatchlistPrices()
+          await this.loadWatchlistPrices(true)
         }
       } catch (error) {
         // Silent fail
@@ -2114,9 +2141,12 @@ export default {
         this.loadingWatchlist = false
       }
     },
-    async loadWatchlistPrices () {
+    async loadWatchlistPrices (force = false) {
       if (!this.watchlist || this.watchlist.length === 0) return
+      if (this.loadingWatchlistPrices) return
+      if (!force && !this._shouldRefreshWatchlistPrices()) return
 
+      this.loadingWatchlistPrices = true
       try {
         const watchlistData = this.watchlist.map(item => ({
           market: item.market,
@@ -2153,15 +2183,18 @@ export default {
             }
             return item
           })
+          this.watchlistPricesLastAt = Date.now()
         }
       } catch (error) {
         // Silent fail
+      } finally {
+        this.loadingWatchlistPrices = false
       }
     },
     startWatchlistPriceRefresh () {
       this.watchlistPriceTimer = setInterval(() => {
         if (this.watchlist && this.watchlist.length > 0) {
-          this.loadWatchlistPrices()
+          this.loadWatchlistPrices(true)
         }
       }, 30000)
 
