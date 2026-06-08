@@ -252,7 +252,7 @@ class="analyze-button">
               <a-tab-pane key="confidence" :tab="$t('aiElasticStock.signalBoard.tabs.confidence')" />
             </a-tabs>
             <a-spin :spinning="signalBoardLoading">
-              <div class="strength-list">
+              <div class="strength-list" @scroll="handleSignalBoardScroll">
                 <div
                   v-for="item in signalBoardList"
                   :key="`sb-${item.id}`"
@@ -284,7 +284,7 @@ class="analyze-button">
                       <div class="sb-info-right">
                         <div class="sb-score">
                           <span class="sb-score-label">{{ $t('aiElasticStock.signalBoard.labels.strength') }}</span>
-                          <span class="sb-score-val">{{ formatNum(getSignalStrength(item), 2) }}</span>
+                          <span class="sb-score-val">{{ formatNum(Number(item.strength) || 0, 2) }}</span>
                         </div>
                         <div class="sb-score">
                           <span class="sb-score-label">{{ $t('aiElasticStock.signalBoard.labels.confidence') }}</span>
@@ -320,6 +320,9 @@ class="analyze-button">
 
                 <div v-if="!signalBoardLoading && signalBoardList.length === 0" class="strength-empty">
                   <a-empty :description="$t('aiElasticStock.signalBoard.empty')" />
+                </div>
+                <div v-if="signalBoardLoadingMore" class="strength-loading-more">
+                  <a-spin size="small" />
                 </div>
               </div>
             </a-spin>
@@ -828,7 +831,11 @@ export default {
       signalBoardTab: 'long',
       signalBoardLoading: false,
       signalBoardRaw: [],
-      signalBoardPageSize: 200,
+      signalBoardPage: 1,
+      signalBoardPageSize: 50,
+      signalBoardTotal: 0,
+      signalBoardHasMore: true,
+      signalBoardLoadingMore: false,
       signalBoardTimer: null,
       signalBoardAutoRefreshMs: 60000,
       signalAddLoadingKey: ''
@@ -930,18 +937,7 @@ export default {
       return null
     },
     signalBoardList () {
-      const processed = this._dedupeLatestBySymbol((this.signalBoardRaw || []).map(this._mapSignalBoardItem).filter(Boolean))
-      if (this.signalBoardTab === 'confidence') {
-        return processed
-          .slice()
-          .sort((a, b) => (Number(b.confidence) || 0) - (Number(a.confidence) || 0) || this._signalBoardInstant(b) - this._signalBoardInstant(a))
-          .slice(0, 50)
-      }
-      const want = this.signalBoardTab === 'short' ? 'SELL' : 'BUY'
-      return processed
-        .filter(it => String(this.getSignalDecision(it)).toUpperCase() === want)
-        .sort((a, b) => this.getSignalStrength(b) - this.getSignalStrength(a) || (Number(b.confidence) || 0) - (Number(a.confidence) || 0) || this._signalBoardInstant(b) - this._signalBoardInstant(a))
-        .slice(0, 50)
+      return this.signalBoardRaw || []
     }
   },
   created () {
@@ -1032,7 +1028,7 @@ export default {
       this.stopSignalBoardAutoRefresh()
       const ms = Number(this.signalBoardAutoRefreshMs) || 60000
       this.signalBoardTimer = setInterval(() => {
-        if (!this.signalBoardLoading) {
+        if (!this.signalBoardLoading && !this.signalBoardLoadingMore && Number(this.signalBoardPage || 1) <= 1) {
           this.loadSignalBoard()
         }
       }, ms)
@@ -1090,18 +1086,64 @@ export default {
       try {
         const res = await getAllAnalysisHistory({
           page: 1,
-          pagesize: this.signalBoardPageSize
+          pagesize: this.signalBoardPageSize,
+          scene: 'signal_board',
+          tab: this.signalBoardTab
         })
         if (res && res.code === 1 && res.data) {
           this.signalBoardRaw = res.data.list || []
+          this.signalBoardPage = Number(res.data.page) || 1
+          this.signalBoardTotal = Number(res.data.total) || 0
+          this.signalBoardHasMore = this.signalBoardRaw.length < this.signalBoardTotal
         } else {
           this.signalBoardRaw = []
+          this.signalBoardPage = 1
+          this.signalBoardTotal = 0
+          this.signalBoardHasMore = false
         }
       } catch (e) {
         this.signalBoardRaw = []
         this.$message.error(this.$t('dashboard.analysis.message.loadHistoryFailed') || '加载历史记录失败')
+        this.signalBoardPage = 1
+        this.signalBoardTotal = 0
+        this.signalBoardHasMore = false
       } finally {
         this.signalBoardLoading = false
+      }
+    },
+    async loadSignalBoardMore () {
+      if (this.signalBoardLoadingMore) return
+      if (!this.signalBoardHasMore) return
+      this.signalBoardLoadingMore = true
+      const nextPage = (Number(this.signalBoardPage) || 1) + 1
+      try {
+        const res = await getAllAnalysisHistory({
+          page: nextPage,
+          pagesize: this.signalBoardPageSize,
+          scene: 'signal_board',
+          tab: this.signalBoardTab
+        })
+        if (res && res.code === 1 && res.data) {
+          const list = res.data.list || []
+          this.signalBoardRaw = [...(this.signalBoardRaw || []), ...list]
+          this.signalBoardPage = Number(res.data.page) || nextPage
+          this.signalBoardTotal = Number(res.data.total) || this.signalBoardTotal
+          this.signalBoardHasMore = this.signalBoardRaw.length < this.signalBoardTotal
+        } else {
+          this.signalBoardHasMore = false
+        }
+      } catch (e) {
+        this.signalBoardHasMore = false
+      } finally {
+        this.signalBoardLoadingMore = false
+      }
+    },
+    handleSignalBoardScroll (e) {
+      const el = e && e.target
+      if (!el) return
+      const threshold = 80
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+        this.loadSignalBoardMore()
       }
     },
     async addToWatchlistFromSignal (item) {
@@ -2412,6 +2454,13 @@ export default {
           this.searchTimer = null
         }
       }
+    },
+    signalBoardTab () {
+      this.signalBoardRaw = []
+      this.signalBoardPage = 1
+      this.signalBoardTotal = 0
+      this.signalBoardHasMore = true
+      this.loadSignalBoard()
     }
   }
 }
@@ -2904,6 +2953,11 @@ export default {
     &::-webkit-scrollbar { width: 3px; }
     &::-webkit-scrollbar-thumb { background: #d4d8dd; border-radius: 2px; }
   }
+.strength-loading-more {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px 0;
+}
 }
 
 .sb-card {
