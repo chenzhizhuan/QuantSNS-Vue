@@ -71,10 +71,10 @@
                 <div class="wl-row-main">
                   <div class="wl-info-left">
                     <div class="wl-symbol-line">
-                      <span class="wl-symbol">{{ stock.symbol }}</span>
+                      <span class="wl-symbol" v-if="stock.name && stock.name !== stock.symbol">{{ stock.name }}</span>
                       <span class="wl-market">{{ getMarketName(stock.market) }}</span>
                     </div>
-                    <div class="wl-name" v-if="stock.name && stock.name !== stock.symbol">{{ stock.name }}</div>
+                    <div class="wl-name">{{ stock.symbol }}</div>
                   </div>
                   <div class="wl-sparkline-wrap" v-if="watchlistPrices[`${stock.market}:${stock.symbol}`]">
                     <svg class="wl-sparkline" viewBox="0 0 60 20" preserveAspectRatio="none">
@@ -151,8 +151,8 @@
               >
                 <span class="symbol-option wl-select-option-row">
                   <a-tag :color="getMarketColor(stock.market)" size="small">{{ getMarketName(stock.market) }}</a-tag>
-                  <strong class="wl-select-symbol">{{ stock.symbol }}</strong>
-                  <span v-if="stock.name" class="symbol-name wl-select-name">{{ stock.name }}</span>
+                  <strong v-if="stock.name" class="wl-select-symbol">{{ stock.name }}</strong>
+                  <span class="symbol-name wl-select-name">{{ stock.symbol }}</span>
                 </span>
               </a-select-option>
               <a-select-option key="add-stock-option" value="__add_stock_option__" class="add-stock-option">
@@ -266,13 +266,8 @@ class="analyze-button">
                           <a-tag :color="getMarketColor(item.market)" class="sb-market-tag">
                             {{ getMarketName(item.market) }}
                           </a-tag>
-                          <strong class="sb-symbol">{{ item.symbol }}</strong>
-                          <span
-                            class="sb-name"
-                            v-if="item.name && item.name !== item.symbol"
-                          >
-                            {{ item.name }}
-                          </span>
+                          <strong class="sb-symbol" v-if="item.name && item.name !== item.symbol">{{ item.name }}</strong>
+                          <span class="sb-name">{{ item.symbol }}</span>
                         </div>
                         <div class="sb-tags">
                           <a-tag
@@ -406,8 +401,8 @@ class="analyze-button">
               <a-list-item-meta>
                 <template slot="title">
                   <div class="symbol-item-content">
-                    <span class="symbol-code">{{ item.symbol }}</span>
-                    <span class="symbol-name">{{ item.name }}</span>
+                    <span class="symbol-code">{{ item.name }}</span>
+                    <span class="symbol-name">{{ item.symbol }}</span>
                     <a-tag v-if="item.exchange" size="small" color="blue" style="margin-left: 8px;">
                       {{ item.exchange }}
                     </a-tag>
@@ -435,8 +430,8 @@ class="analyze-button">
                 <a-list-item-meta>
                   <template slot="title">
                     <div class="symbol-item-content">
-                      <span class="symbol-code">{{ item.symbol }}</span>
-                      <span class="symbol-name">{{ item.name }}</span>
+                      <span class="symbol-code">{{ item.name }}</span>
+                      <span class="symbol-name">{{ item.symbol }}</span>
                       <a-tag v-if="item.exchange" size="small" color="orange" style="margin-left: 8px;">
                         {{ item.exchange }}
                       </a-tag>
@@ -463,8 +458,8 @@ class="analyze-button">
                 <a-tag :color="getMarketColor(selectedSymbolForAdd.market)" style="margin-right: 8px;">
                   {{ $t(`dashboard.analysis.market.${selectedSymbolForAdd.market}`) }}
                 </a-tag>
-                <strong>{{ selectedSymbolForAdd.symbol }}</strong>
-                <span v-if="selectedSymbolForAdd.name" style="color: #999; margin-left: 8px;">{{ selectedSymbolForAdd.name }}</span>
+                <strong v-if="selectedSymbolForAdd.name">{{ selectedSymbolForAdd.name }}</strong>
+                <span style="color: #999; margin-left: 8px;">{{ selectedSymbolForAdd.symbol }}</span>
               </div>
             </template>
           </a-alert>
@@ -668,9 +663,9 @@ class="analyze-button">
                     <a-tag :color="getMarketColor(item.market)" style="margin-right: 8px;">
                       {{ getMarketName(item.market) }}
                     </a-tag>
-                    <strong>{{ item.symbol }}</strong>
-                    <span v-if="item.name && item.name !== item.symbol" style="margin-left: 6px; color: #666; font-size: 12px;">
-                      {{ item.name }}
+                    <strong v-if="item.name && item.name !== item.symbol">{{ item.name }}</strong>
+                    <span style="margin-left: 6px; color: #666; font-size: 12px;">
+                      {{ item.symbol }}
                     </span>
                     <a-tag
                       :color="item.decision === 'BUY' ? 'green' : (item.decision === 'SELL' ? 'red' : 'blue')"
