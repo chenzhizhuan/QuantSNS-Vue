@@ -807,8 +807,9 @@
               <a-icon type="thunderbolt" />
             </div>
             <div class="summary-info">
-              <div class="summary-value">{{ aiStatsSummary.total_analyses || 0 }}</div>
-              <div class="summary-label">{{ $t('adminAiStats.totalAnalyses') || 'Total Analyses' }}</div>
+              <div class="summary-value">{{ (aiStatsSummary.total_analyses || 0) + (aiStatsSummary.total_copilot_sessions || 0) }}</div>
+              <div class="summary-label">{{ $t('adminAiStats.aiActivity') || 'AI Activity' }}</div>
+              <div class="summary-sub">{{ aiStatsSummary.total_analyses || 0 }} {{ isZh ? '份报告' : 'reports' }} / {{ aiStatsSummary.total_copilot_sessions || 0 }} {{ isZh ? '个会话' : 'chats' }}</div>
             </div>
           </div>
           <div class="summary-card">
@@ -816,8 +817,9 @@
               <a-icon type="team" />
             </div>
             <div class="summary-info">
-              <div class="summary-value">{{ aiStatsSummary.unique_users || 0 }}</div>
+              <div class="summary-value">{{ Math.max(aiStatsSummary.unique_users || 0, aiStatsSummary.unique_chat_users || 0) }}</div>
               <div class="summary-label">{{ $t('adminAiStats.activeUsers') || 'Active Users' }}</div>
+              <div class="summary-sub">{{ aiStatsSummary.unique_chat_users || 0 }} {{ isZh ? '名 Copilot 用户' : 'Copilot users' }}</div>
             </div>
           </div>
           <div class="summary-card">
@@ -825,8 +827,8 @@
               <a-icon type="stock" />
             </div>
             <div class="summary-info">
-              <div class="summary-value">{{ aiStatsSummary.unique_symbols || 0 }}</div>
-              <div class="summary-label">{{ $t('adminAiStats.uniqueSymbols') || 'Symbols Analyzed' }}</div>
+              <div class="summary-value">{{ aiStatsSummary.total_copilot_messages || 0 }}</div>
+              <div class="summary-label">{{ $t('adminAiStats.copilotMessages') || 'Copilot Messages' }}</div>
             </div>
           </div>
           <div class="summary-card">
@@ -875,7 +877,7 @@
             :loading="aiStatsLoading"
             :pagination="aiStatsPagination"
             :rowKey="record => record.user_id"
-            :scroll="{ x: 960 }"
+            :scroll="{ x: 1160 }"
             @change="handleAiStatsTableChange"
           >
             <!-- User Column -->
@@ -1261,6 +1263,10 @@ export default {
   },
   computed: {
     ...mapGetters(['userInfo']),
+    isZh () {
+      const locale = this.$i18n ? String(this.$i18n.locale || '') : 'zh-CN'
+      return locale.toLowerCase().startsWith('zh')
+    },
     isDarkTheme () {
       return this.navTheme === 'dark' || this.navTheme === 'realdark'
     },
@@ -1649,6 +1655,18 @@ export default {
           title: this.$t('adminAiStats.colMarkets') || 'Markets',
           dataIndex: 'market_count',
           width: 90,
+          align: 'center'
+        },
+        {
+          title: this.$t('adminAiStats.colCopilotSessions') || 'Chats',
+          dataIndex: 'chat_session_count',
+          width: 90,
+          align: 'center'
+        },
+        {
+          title: this.$t('adminAiStats.colCopilotMessages') || 'Messages',
+          dataIndex: 'chat_message_count',
+          width: 100,
           align: 'center'
         },
         {

@@ -39,7 +39,6 @@
         <div class="hero-main">
           <div class="hero-copy">
             <span class="eyebrow">AI Copilot</span>
-            <h2>{{ text.title }}</h2>
             <p>{{ text.subtitle }}</p>
           </div>
           <div class="context-bar">
@@ -102,7 +101,18 @@
           </div>
         </div>
 
-        <article v-for="msg in messages" :key="msg.localId || msg.id" class="message" :class="msg.role">
+        <article
+          v-for="msg in messages"
+          :key="msg.localId || msg.id"
+          class="message"
+          :class="[
+            msg.role,
+            {
+              'report-message': msg.report || msg.reportLoading || msg.reportError,
+              'printing-report-message': printReportId && reportId(msg) === printReportId
+            }
+          ]"
+        >
           <div class="avatar">
             <a-icon :type="msg.role === 'assistant' ? 'robot' : 'user'" />
           </div>
@@ -113,6 +123,21 @@
               </div>
             </div>
             <div class="message-content" v-html="renderMarkdown(msg.content)" @click="handleMessageContentClick" />
+            <div
+              v-if="msg.report || msg.reportLoading || msg.reportError"
+              :data-report-id="reportId(msg)"
+              class="copilot-report-card"
+            >
+              <FastAnalysisReport
+                :result="msg.report || null"
+                :loading="!!msg.reportLoading"
+                :error="msg.reportError || null"
+                :error-tone="msg.reportErrorTone || 'error'"
+                @retry="retryProfessionalAnalysis(msg)"
+                @generate-strategy="handleReportGenerateStrategy"
+                @go-backtest="handleReportGoBacktest"
+              />
+            </div>
             <div v-if="msg.meta" class="message-meta">{{ msg.meta }}</div>
             <div v-if="visibleMessageActions(msg).length || strategyCodeForMessage(msg)" class="message-actions">
               <button v-for="action in visibleMessageActions(msg)" :key="action.key || action.label" type="button" @click="runMessageAction(action)">
@@ -306,14 +331,14 @@
       :cancel-text="text.cancel"
       :confirm-loading="addingWatch"
       :ok-button-props="{ props: { disabled: !addWatchSelected } }"
-      wrap-class-name="copilot-modal"
+      wrap-class-name="copilot-modal add-watch-copilot-modal"
       width="620px"
       @ok="confirmAddWatchSymbol"
       @cancel="closeAddWatchModal"
     >
       <div class="add-watch-modal">
         <a-tabs v-model="addWatchMarket" @change="handleAddWatchMarketChange">
-          <a-tab-pane v-for="market in markets" :key="market.value" :tab="market.label" />
+          <a-tab-pane v-for="market in markets" :key="market.value" :tab="marketLabel(market.value)" />
         </a-tabs>
         <a-input-search
           v-model="addWatchKeyword"
@@ -415,23 +440,22 @@ import { aiGenerateStrategy } from '@/api/strategy'
 import { getEconomicCalendar } from '@/api/global-market'
 import { getMembershipPlans } from '@/api/billing'
 import { getMonitors, addMonitor, updateMonitor, deleteMonitor } from '@/api/portfolio'
+import { fastAnalyze } from '@/api/fast-analysis'
 import storage from 'store'
 import { ACCESS_TOKEN } from '@/store/mutation-types'
+import { loadEnabledMarketOptions, firstMarketValue } from '@/utils/marketModules'
+import FastAnalysisReport from './FastAnalysisReport.vue'
 
 let localId = 1
 
 export default {
   name: 'CopilotWorkbench',
+  components: {
+    FastAnalysisReport
+  },
   data () {
     return {
-      markets: [
-        { value: 'Crypto', label: 'Crypto' },
-        { value: 'USStock', label: 'US Stock' },
-        { value: 'HKStock', label: 'HK Stock' },
-        { value: 'CNStock', label: 'CN Stock' },
-        { value: 'Forex', label: 'Forex' },
-        { value: 'Futures', label: 'Futures' }
-      ],
+      markets: [],
       context: { market: '', symbol: '' },
       selectedSymbolValue: '',
       watchAddValue: undefined,
@@ -476,7 +500,8 @@ export default {
       taskModalVisible: false,
       savingMonitor: false,
       taskTarget: null,
-      taskForm: { interval_min: 240, notify_channels: [] }
+      taskForm: { interval_min: 240, notify_channels: [] },
+      printReportId: ''
     }
   },
   computed: {
@@ -843,6 +868,9 @@ export default {
       ]
     },
     estimatedCost () {
+      if (this.billing && this.billing.billing_enabled === false) {
+        return this.isZh ? '免费' : 'Free'
+      }
       const costs = this.billing.feature_costs || {}
       const chat = Number(costs.ai_copilot_chat || 0)
       const img = this.attachments.length > 0 ? Number(costs.ai_copilot_image || 0) : 0
@@ -888,6 +916,7 @@ export default {
     }
   },
   mounted () {
+    this.loadMarketModules()
     this.seedSymbolOptions()
     this.loadBilling()
     this.loadWatchlist()
@@ -902,6 +931,22 @@ export default {
     if (this.addWatchSearchTimer) clearTimeout(this.addWatchSearchTimer)
   },
   methods: {
+    async loadMarketModules () {
+      const options = await loadEnabledMarketOptions({ includeFeatures: ['research'] })
+      this.markets = options.map(item => ({
+        value: item.value,
+        label: item.label || item.value,
+        i18nKey: item.i18nKey,
+        module: item.module
+      }))
+      const values = this.markets.map(item => item.value)
+      if (!values.includes(this.addWatchMarket)) {
+        this.addWatchMarket = firstMarketValue(this.markets)
+      }
+      if (this.context.market && !values.includes(this.context.market)) {
+        this.context = { market: '', symbol: '' }
+      }
+    },
     async loadAiSkills () {
       this.loadingSkills = true
       try {
@@ -917,7 +962,8 @@ export default {
     async loadBilling () {
       try {
         const res = await getMembershipPlans()
-        this.billing = (res.data && res.data.billing_config) || {}
+        const data = res.data || {}
+        this.billing = data.billing || data.billing_config || {}
       } catch (_) {}
     },
     async loadCalendar (force = false) {
@@ -1041,7 +1087,7 @@ export default {
         this.symbolOptions = list.map(x => this.normalizeSymbolOption(x)).filter(Boolean)
       } catch (_) {
         const inferred = this.inferSymbolFromText(kw)
-        this.symbolOptions = [{ market: (inferred && inferred.market) || this.context.market || 'Crypto', symbol: kw.toUpperCase() }]
+        this.symbolOptions = [{ market: (inferred && inferred.market) || this.context.market || firstMarketValue(this.markets), symbol: kw.toUpperCase() }]
       } finally {
         this.symbolSearching = false
       }
@@ -1336,6 +1382,14 @@ export default {
         this.createMonitorFromAction(action.payload || {})
         return
       }
+      if (action && action.type === 'export_report_pdf') {
+        this.exportReportPdf(action.payload && action.payload.reportId)
+        return
+      }
+      if (action && action.type === 'ask_about_report') {
+        this.askAboutReport(action.payload && action.payload.reportId)
+        return
+      }
       if (!action || !action.path) return
       if (!this.isAllowedMessageActionPath(action.path)) {
         this.$message.warning(this.isZh ? '该操作不在允许的跳转范围内' : 'This action is not allowed')
@@ -1531,10 +1585,11 @@ export default {
         this.messages.push({
           localId: 'local-' + localId++,
           role: 'assistant',
-          content: this.isZh
-            ? '我可以创建 AI 定时分析任务，但当前没有明确标的。请先选择数据源上下文，或直接说明标的，例如 Crypto:BTC/USDT。'
-            : 'I can create an AI scheduled analysis task, but no symbol is selected. Choose a data context or mention a symbol like Crypto:BTC/USDT.',
-          meta: this.isZh ? '缺少标的' : 'missing symbol',
+          content: this.i18nText(
+            'aiAssetAnalysis.copilot.monitorMissingSymbol',
+            'I can create an AI scheduled analysis task, but no symbol is selected. Choose a data context or mention a symbol like Crypto:BTC/USDT.'
+          ),
+          meta: this.i18nText('aiAssetAnalysis.copilot.missingSymbolMeta', 'missing symbol'),
           created_at: new Date().toISOString()
         })
         return true
@@ -1786,11 +1841,7 @@ export default {
       if (!item) return
       const activeItem = { ...item, prompt: await this.resolveSkillPrompt(item) }
       if (activeItem.action === 'analysis') {
-        if (activeItem.skillId && activeItem.prompt) {
-          this.usePrompt(activeItem.prompt)
-        } else {
-          this.runProfessionalAnalysis()
-        }
+        this.runProfessionalAnalysis()
         return
       }
       if (activeItem.action === 'strategy') {
@@ -1847,8 +1898,153 @@ export default {
         this.$message.info(this.isZh ? '已填入诊断模板，请补充标的后发送。' : 'Analysis prompt inserted. Add a symbol, then send it.')
         return
       }
-      this.draft = this.buildAnalysisPrompt(target)
-      this.$nextTick(() => this.sendMessage())
+      const userMsg = {
+        localId: `local-${localId++}`,
+        role: 'user',
+        content: this.isZh
+          ? `诊断 ${target.market}:${target.symbol}`
+          : `Diagnose ${target.market}:${target.symbol}`,
+        created_at: new Date().toISOString()
+      }
+      const assistantMsg = {
+        localId: `local-${localId++}`,
+        role: 'assistant',
+        content: '',
+        meta: this.text.analysisRunning,
+        reportLoading: true,
+        reportTarget: target,
+        created_at: new Date().toISOString()
+      }
+      this.messages.push(userMsg, assistantMsg)
+      this.scrollToBottom()
+      this.sending = true
+      try {
+        const result = await this.fetchProfessionalAnalysis(target)
+        assistantMsg.report = result
+        assistantMsg.reportLoading = false
+        assistantMsg.reportError = ''
+        assistantMsg.meta = this.text.analysisComplete
+        assistantMsg.actions = this.reportActions(assistantMsg)
+        await this.persistCopilotMessage(userMsg, 'fast_analysis_user')
+        await this.persistCopilotMessage(assistantMsg, 'fast_analysis_report')
+        this.loadSessions()
+      } catch (e) {
+        assistantMsg.reportLoading = false
+        assistantMsg.reportError = (e && e.response && e.response.data && e.response.data.msg) || (e && e.message) || (this.isZh ? '分析失败' : 'Analysis failed')
+        assistantMsg.reportErrorTone = this.isInProgressError(e) ? 'warning' : 'error'
+        assistantMsg.meta = this.isZh ? '分析失败' : 'analysis failed'
+      } finally {
+        this.sending = false
+        this.scrollToBottom()
+      }
+    },
+    async fetchProfessionalAnalysis (target) {
+      const res = await fastAnalyze({
+        market: target.market,
+        symbol: target.symbol,
+        language: this.$i18n ? this.$i18n.locale : 'zh-CN',
+        timeframe: '1D'
+      })
+      if (!res || res.code === 0) {
+        const err = new Error((res && res.msg) || (this.isZh ? '分析失败' : 'Analysis failed'))
+        err.response = { data: res || {} }
+        throw err
+      }
+      const data = res.data || {}
+      return {
+        ...data,
+        market: data.market || target.market,
+        symbol: data.symbol || target.symbol
+      }
+    },
+    isInProgressError (e) {
+      const data = e && e.response && e.response.data
+      const msg = String((data && data.msg) || (e && e.message) || '')
+      return msg.toLowerCase().includes('in progress') || msg.includes('正在进行')
+    },
+    reportId (msg) {
+      return String((msg && (msg.localId || msg.id)) || '')
+    },
+    reportActions (msg) {
+      const id = this.reportId(msg)
+      return [
+        {
+          key: `export-report-${id}`,
+          type: 'export_report_pdf',
+          icon: 'download',
+          label: this.isZh ? '导出 PDF' : 'Export PDF',
+          payload: { reportId: id }
+        },
+        {
+          key: `ask-report-${id}`,
+          type: 'ask_about_report',
+          icon: 'message',
+          label: this.isZh ? '继续追问' : 'Ask follow-up',
+          payload: { reportId: id }
+        }
+      ]
+    },
+    async retryProfessionalAnalysis (msg) {
+      const target = msg && msg.reportTarget
+      if (!target || !target.symbol) return
+      msg.reportLoading = true
+      msg.reportError = ''
+      msg.meta = this.text.analysisRunning
+      this.sending = true
+      try {
+        msg.report = await this.fetchProfessionalAnalysis(target)
+        msg.reportLoading = false
+        msg.actions = this.reportActions(msg)
+        msg.meta = this.text.analysisComplete
+      } catch (e) {
+        msg.reportLoading = false
+        msg.reportError = (e && e.response && e.response.data && e.response.data.msg) || (e && e.message) || (this.isZh ? '分析失败' : 'Analysis failed')
+        msg.reportErrorTone = this.isInProgressError(e) ? 'warning' : 'error'
+      } finally {
+        this.sending = false
+      }
+    },
+    handleReportGenerateStrategy (result) {
+      const market = result.market || (this.context && this.context.market) || ''
+      const symbol = result.symbol || (this.context && this.context.symbol) || ''
+      const decision = result.decision || 'HOLD'
+      const tp = result.trading_plan || {}
+      const query = {
+        mode: 'create',
+        market,
+        symbol,
+        from_analysis: '1',
+        decision,
+        entry_price: tp.entry_price || tp.entryPrice || '',
+        stop_loss: tp.stop_loss || tp.stopLoss || '',
+        take_profit: tp.take_profit || tp.takeProfit || ''
+      }
+      Object.keys(query).forEach(k => { if (!query[k] && query[k] !== 0) delete query[k] })
+      this.$router.push({ path: '/strategy-live', query })
+    },
+    handleReportGoBacktest (result) {
+      const market = result.market || (this.context && this.context.market) || ''
+      const symbol = result.symbol || (this.context && this.context.symbol) || ''
+      this.$router.push({ path: '/indicator-ide', query: { market, symbol } })
+    },
+    exportReportPdf (reportId) {
+      if (!reportId) return
+      this.printReportId = String(reportId)
+      this.$nextTick(() => {
+        window.print()
+        window.setTimeout(() => {
+          this.printReportId = ''
+        }, 500)
+      })
+    },
+    askAboutReport (reportId) {
+      const msg = (this.messages || []).find(item => this.reportId(item) === String(reportId))
+      const target = (msg && msg.reportTarget) || this.context
+      const label = target && target.symbol ? `${target.market}:${target.symbol}` : (this.isZh ? '这份报告' : 'this report')
+      this.usePrompt(this.isZh
+        ? `基于刚才 ${label} 的诊断报告，请继续解释：`
+        : `Based on the diagnosis report for ${label}, explain further:`
+      )
     },
     buildAnalysisPrompt (target) {
       const symbol = target && target.symbol ? `${target.market}:${target.symbol}` : (this.isZh ? '用户指定的标的' : 'the user-selected symbol')
@@ -1925,7 +2121,10 @@ export default {
     buildStrategyPrompt (targetKey, target) {
       const targetText = target && target.symbol
         ? `${target.market}:${target.symbol}`
-        : (this.isZh ? '【在这里填写标的，例如 Crypto:BTC/USDT 或 CNStock:300750】' : '[enter symbol here, e.g. Crypto:BTC/USDT or CNStock:300750]')
+        : this.i18nText(
+          'aiAssetAnalysis.copilot.strategySymbolPlaceholder',
+          '[enter symbol here, e.g. Crypto:BTC/USDT or CNStock:300750]'
+        )
       const commonZh = [
         `请为 ${targetText} 设计一个策略。`,
         '',
@@ -2040,9 +2239,10 @@ export default {
         this.messages.push({
           localId: `local-${localId++}`,
           role: 'assistant',
-          content: this.isZh
-            ? '我判断这是一个策略创建任务，但还缺少明确标的。请补充例如 `Crypto:BTC/USDT`、`USStock:SPCX` 或 `CNStock:300750`。'
-            : 'I classified this as a strategy creation task, but the target symbol is missing. Please provide a symbol such as `Crypto:BTC/USDT`, `USStock:SPCX`, or `CNStock:300750`.',
+          content: this.i18nText(
+            'aiAssetAnalysis.copilot.strategyMissingSymbol',
+            'I classified this as a strategy creation task, but the target symbol is missing. Please provide a symbol such as `Crypto:BTC/USDT`, `USStock:SPCX`, or `CNStock:300750`.'
+          ),
           meta: 'agent_intent:missing_symbol',
           created_at: new Date().toISOString()
         })
@@ -3155,7 +3355,17 @@ export default {
       if (pct === null) return '--'
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`
     },
+    i18nText (key, fallback, values) {
+      const translated = this.$t ? this.$t(key, values) : key
+      if (translated && translated !== key) return translated
+      return Object.entries(values || {}).reduce((text, [name, value]) => {
+        return text.replace(new RegExp(`\\{${name}\\}`, 'g'), value)
+      }, fallback)
+    },
     marketLabel (market) {
+      const key = `dashboard.analysis.market.${market}`
+      const translated = this.$t ? this.$t(key) : key
+      if (translated && translated !== key) return translated
       const found = this.markets.find(m => m.value === market)
       return found ? found.label : (market || '--')
     },
@@ -3849,6 +4059,24 @@ export default {
   color: var(--qd-text);
   line-height: 1.72;
   box-shadow: 0 4px 16px rgba(20, 43, 72, 0.045);
+}
+
+.message.report-message.assistant .bubble {
+  width: 100%;
+  max-width: 920px;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.copilot-report-card {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--qd-border-soft);
+  border-radius: 8px;
+  background: var(--qd-panel);
 }
 
 .message.user .bubble {
@@ -5235,6 +5463,157 @@ body.realdark .copilot-workbench .empty-mini,
 
   .composer-actions {
     justify-content: flex-end;
+  }
+}
+
+@media print {
+  .copilot-workbench {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .copilot-workbench > .left-rail,
+  .copilot-workbench > .right-rail,
+  .copilot-workbench .chat-hero,
+  .copilot-workbench .composer,
+  .copilot-workbench .welcome,
+  .copilot-workbench .message:not(.printing-report-message),
+  .copilot-workbench .printing-report-message .avatar,
+  .copilot-workbench .printing-report-message .message-content,
+  .copilot-workbench .printing-report-message .message-meta,
+  .copilot-workbench .printing-report-message .message-actions,
+  .copilot-workbench .printing-report-message .message-time {
+    display: none !important;
+  }
+
+  .copilot-workbench .chat-panel,
+  .copilot-workbench .messages,
+  .copilot-workbench .printing-report-message,
+  .copilot-workbench .printing-report-message .bubble,
+  .copilot-workbench .copilot-report-card {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+}
+</style>
+
+<style lang="less">
+.add-watch-copilot-modal {
+  .ant-modal-content,
+  .ant-modal-header,
+  .ant-modal-footer {
+    background: var(--qd-panel, #fff);
+    border-color: var(--qd-border-soft, #e8eff7);
+  }
+
+  .ant-modal-title,
+  .ant-modal-close,
+  .ant-modal-close-x,
+  .ant-tabs-tab,
+  .ant-input,
+  .ant-input-search-button {
+    color: var(--qd-text, #12243d);
+  }
+
+  .ant-input {
+    background: var(--qd-panel-soft, #f7fafd);
+    border-color: var(--qd-border-soft, #e8eff7);
+  }
+
+  .ant-tabs-bar {
+    border-bottom-color: var(--qd-border-soft, #e8eff7);
+  }
+
+  .ant-tabs-tab:hover,
+  .ant-tabs-tab-active {
+    color: var(--qd-accent, #1677ff);
+  }
+
+  .ant-tabs-ink-bar {
+    background: var(--qd-accent, #1677ff);
+  }
+
+  .symbol-result-card {
+    border-color: var(--qd-border-soft, #e8eff7);
+    background: var(--qd-panel-soft, #f7fafd);
+    color: var(--qd-text, #12243d);
+  }
+
+  .symbol-result-card em {
+    color: var(--qd-text-subtle, #92a2b6);
+  }
+
+  .add-watch-results {
+    scrollbar-color: var(--qd-text-subtle, #92a2b6) transparent;
+  }
+}
+
+body.dark .add-watch-copilot-modal,
+body.realdark .add-watch-copilot-modal,
+.theme-dark .add-watch-copilot-modal {
+  --qd-panel: #161616;
+  --qd-panel-soft: #101010;
+  --qd-border-soft: rgba(255, 255, 255, 0.12);
+  --qd-text: #e7edf6;
+  --qd-text-muted: #9ba6b8;
+  --qd-text-subtle: #7d8798;
+  --qd-accent: var(--primary-color, #3b6bff);
+  --qd-accent-soft: color-mix(in srgb, var(--qd-accent) 16%, #111111);
+
+  .ant-modal-content,
+  .ant-modal-header,
+  .ant-modal-footer {
+    background: #161616 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .ant-modal-title,
+  .ant-modal-close,
+  .ant-modal-close-x,
+  .ant-tabs-tab {
+    color: #dbe4f0 !important;
+  }
+
+  .ant-input {
+    background: #101010 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #e7edf6 !important;
+  }
+
+  .ant-input::placeholder {
+    color: #687386 !important;
+  }
+
+  .ant-tabs-bar {
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .symbol-result-card {
+    border-color: rgba(255, 255, 255, 0.11) !important;
+    background: #111827 !important;
+    color: #e7edf6 !important;
+  }
+
+  .symbol-result-card:hover,
+  .symbol-result-card.active {
+    border-color: color-mix(in srgb, var(--qd-accent) 62%, rgba(255, 255, 255, 0.12)) !important;
+    background: color-mix(in srgb, var(--qd-accent) 15%, #111827) !important;
+  }
+
+  .symbol-result-card em {
+    color: #8a96a8 !important;
   }
 }
 </style>

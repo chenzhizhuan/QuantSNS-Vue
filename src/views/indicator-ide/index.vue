@@ -1578,6 +1578,7 @@ import { baseMixin } from '@/store/app-mixin'
 import request from '@/utils/request'
 import { formatBacktestTime } from '@/utils/userTime'
 import { resolveExperimentIndicatorParams } from '@/utils/experimentOverrides'
+import { loadEnabledMarketOptions, firstMarketValue } from '@/utils/marketModules'
 import { getUserInfo } from '@/api/login'
 import { getWatchlist, addWatchlist, searchSymbols } from '@/api/market'
 import KlineChart from '@/views/indicator-analysis/components/KlineChart.vue'
@@ -1606,9 +1607,6 @@ const DATE_PRESETS = [
   { key: '2y', label: '2Y', days: 730 },
   { key: '3y', label: '3Y', days: 1095 }
 ]
-
-/** 与指标分析 / AI 资产分析一致的市场列表（含 A 股、H 股、预测市场） */
-const IDE_ADD_MARKET_KEYS = ['Crypto', 'USStock', 'CNStock', 'HKStock', 'Forex', 'Futures']
 
 function purchasedMarketHintStorageKey (userId) {
   const u = userId != null && userId !== '' ? String(userId) : '0'
@@ -1777,7 +1775,7 @@ export default {
       showHistoryDrawer: false,
       historyIndicatorId: null,
 
-      ideAddMarketKeys: IDE_ADD_MARKET_KEYS,
+      ideAddMarketKeys: [],
 
       eqChartInstance: null,
       elapsedSec: 0,
@@ -2389,6 +2387,7 @@ export default {
     }
   },
   async created () {
+    await this.loadMarketModules()
     await this.loadUserId()
     this.loadPurchasedMarketHintDismissed()
     this.loadStrategyDirectivesAlertDismissed()
@@ -2442,6 +2441,16 @@ export default {
     } catch (_) {}
   },
   methods: {
+    async loadMarketModules () {
+      const options = await loadEnabledMarketOptions({ includeFeatures: ['research'] })
+      this.ideAddMarketKeys = options.map(item => item.value)
+      if (!this.ideAddMarketKeys.includes(this.addMarketTab)) {
+        this.addMarketTab = firstMarketValue(options)
+      }
+      if (!this.ideAddMarketKeys.includes(this.market)) {
+        this.market = this.addMarketTab || firstMarketValue(options)
+      }
+    },
     applyCopilotDraft () {
       const q = this.$route && this.$route.query ? this.$route.query : {}
       const targetTab = String(q.tab || '').toLowerCase()

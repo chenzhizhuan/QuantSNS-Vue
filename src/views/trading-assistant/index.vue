@@ -1571,6 +1571,7 @@ import { formatExchangeCredentialLabel } from '@/utils/exchangeCredential'
 import { getNotificationSettings } from '@/api/user'
 import { baseMixin } from '@/store/app-mixin'
 import request from '@/utils/request'
+import { loadEnabledMarketOptions, firstMarketValue } from '@/utils/marketModules'
 import TradingRecords from './components/TradingRecords.vue'
 import PositionRecords from './components/PositionRecords.vue'
 import StrategyTypeSelector from './components/StrategyTypeSelector.vue'
@@ -2211,12 +2212,7 @@ export default {
       // 添加交易对弹窗相关
       showAddSymbolModal: false,
       addSymbolMarket: 'Crypto',
-      addSymbolMarketTypes: [
-        { value: 'Crypto', i18nKey: 'dashboard.analysis.market.Crypto' },
-        { value: 'USStock', i18nKey: 'dashboard.analysis.market.USStock' },
-        { value: 'Forex', i18nKey: 'dashboard.analysis.market.Forex' },
-        { value: 'Futures', i18nKey: 'dashboard.analysis.market.Futures' }
-      ],
+      addSymbolMarketTypes: [],
       addSymbolKeyword: '',
       searchingSymbol: false,
       symbolSearchResults: [],
@@ -2233,7 +2229,7 @@ export default {
   beforeCreate () {
     this.form = this.$form.createForm(this)
   },
-  mounted () {
+  async mounted () {
     this.restoreAssistantGuidePreference()
     if (this.isScriptStrategiesOnlyPage) {
       this.topTab = 'strategy'
@@ -2241,6 +2237,7 @@ export default {
     if (this.$route.query.tab === 'strategy' || this.$route.query.mode === 'create') {
       this.topTab = 'strategy'
     }
+    await this.loadMarketModules()
     this.loadStrategies()
     this.loadUserNotificationSettings()
 
@@ -2270,6 +2267,18 @@ export default {
     this.stopEquityPolling()
   },
   methods: {
+    async loadMarketModules () {
+      const options = await loadEnabledMarketOptions({ includeFeatures: ['research'] })
+      this.addSymbolMarketTypes = options
+      const values = options.map(item => item.value)
+      if (!values.includes(this.addSymbolMarket)) {
+        this.addSymbolMarket = firstMarketValue(options)
+      }
+      if (!values.includes(this.selectedMarketCategory)) {
+        this.selectedMarketCategory = this.addSymbolMarket || firstMarketValue(options)
+        this.applyMarketDefaultsForCategory(this.selectedMarketCategory)
+      }
+    },
     restoreAssistantGuidePreference () {
       try {
         this.assistantGuideDismissed = window.localStorage.getItem(this.assistantGuideStorageKey) === '1'

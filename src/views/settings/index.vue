@@ -156,6 +156,46 @@
                         </a-select-option>
                       </a-select>
                     </template>
+                    <template v-else-if="entry.item.type === 'market_multiselect'">
+                      <a-checkbox-group
+                        v-decorator="[entry.item.key, { initialValue: getCsvListValue(entry.groupKey, entry.item.key, entry.item.default) }]"
+                        class="market-module-grid"
+                      >
+                        <div
+                          v-for="market in getMarketModuleRows(entry.item)"
+                          :key="market.key"
+                          class="market-module-row"
+                        >
+                          <div class="market-module-main">
+                            <a-checkbox :value="market.key">
+                              <span class="market-module-label">{{ marketModuleLabel(market) }}</span>
+                            </a-checkbox>
+                            <a-tag :color="marketStatusColor(market.status)">
+                              {{ marketStatusText(market.status) }}
+                            </a-tag>
+                          </div>
+                          <div class="market-module-desc">{{ marketModuleDescription(market) }}</div>
+                          <div class="market-module-meta">
+                            <span>{{ market.symbol_hint }}</span>
+                            <span v-if="market.live_brokers && market.live_brokers.length">
+                              {{ marketLiveText(market) }}
+                            </span>
+                            <span v-else>{{ marketResearchOnlyText() }}</span>
+                          </div>
+                          <div v-if="market.data_sources && market.data_sources.length" class="market-data-source-list">
+                            <span
+                              v-for="source in market.data_sources"
+                              :key="source.key"
+                              class="market-data-source"
+                              :class="{ configured: source.configured, missing: !source.configured && (source.required || source.recommended) }"
+                            >
+                              {{ marketSourceLabel(source) }}
+                              <small>{{ sourceStatusText(source) }}</small>
+                            </span>
+                          </div>
+                        </div>
+                      </a-checkbox-group>
+                    </template>
                     <div class="field-default" v-if="entry.item.default && entry.item.type !== 'boolean' && entry.item.type !== 'password'">
                       {{ $t('settings.default') }}: {{ entry.item.default }}
                     </div>
@@ -254,80 +294,84 @@
 
                   <a-row :gutter="24">
                     <a-col
-                      v-for="item in section.items"
-                      :key="item.key"
+                      v-for="entry in section.entries"
+                      :key="entry.key"
                       :xs="24"
                       :sm="24"
-                      :md="item.key === 'LLM_PROVIDER' ? 24 : 12"
-                      :lg="item.key === 'LLM_PROVIDER' ? 24 : 12"
+                      :md="entry.type === 'heading' ? 24 : (entry.item.key === 'LLM_PROVIDER' ? 24 : 12)"
+                      :lg="entry.type === 'heading' ? 24 : (entry.item.key === 'LLM_PROVIDER' ? 24 : 12)"
                     >
-                      <a-form-item>
+                      <div v-if="entry.type === 'heading'" class="settings-subsection-heading">
+                        <span>{{ entry.title }}</span>
+                        <small>{{ entry.description }}</small>
+                      </div>
+                      <a-form-item v-else>
                         <template slot="label">
                           <span class="form-label-with-tooltip">
-                            <span class="label-text">{{ getItemLabel(activeGroupKey, item) }}</span>
-                            <a-tooltip v-if="item.description" placement="top">
+                            <span class="label-text">{{ getItemLabel(activeGroupKey, entry.item) }}</span>
+                            <a-tooltip v-if="entry.item.description" placement="top">
                               <template slot="title">
-                                {{ getItemDescription(activeGroupKey, item) }}
+                                {{ getItemDescription(activeGroupKey, entry.item) }}
                               </template>
                               <a-icon type="question-circle" class="help-icon" />
                             </a-tooltip>
                             <a
-                              v-if="item.link"
-                              :href="item.link"
+                              v-if="entry.item.link"
+                              :href="entry.item.link"
                               target="_blank"
                               rel="noopener noreferrer"
                               class="api-link"
                               @click.stop
                             >
                               <a-icon type="link" />
-                              {{ getLinkText(item.link_text) }}
+                              {{ getLinkText(entry.item.link_text) }}
                             </a>
                           </span>
                         </template>
-                        <template v-if="item.type === 'text'">
+                        <template v-if="entry.item.type === 'text'">
                           <a-input
-                            v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) }]"
-                            :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : ''"
+                            v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) }]"
+                            :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : ''"
                             allowClear
                           />
                         </template>
-                        <template v-else-if="item.type === 'password'">
+                        <template v-else-if="entry.item.type === 'password'">
                           <div class="password-field">
                             <a-input
-                              v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) }]"
-                              :type="passwordVisible[item.key] ? 'text' : 'password'"
+                              v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) }]"
+                              :type="passwordVisible[entry.item.key] ? 'text' : 'password'"
                               :placeholder="$t('settings.inputApiKey')"
                               allowClear
                             >
                               <a-icon
                                 slot="suffix"
-                                :type="passwordVisible[item.key] ? 'eye' : 'eye-invisible'"
-                                @click="togglePasswordVisible(item.key)"
+                                :type="passwordVisible[entry.item.key] ? 'eye' : 'eye-invisible'"
+                                @click="togglePasswordVisible(entry.item.key)"
                                 style="cursor: pointer"
                               />
                             </a-input>
                           </div>
                         </template>
-                        <template v-else-if="item.type === 'number'">
+                        <template v-else-if="entry.item.type === 'number'">
                           <a-input-number
-                            v-decorator="[item.key, { initialValue: getNumberValue(activeGroupKey, item.key, item.default) }]"
-                            :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : ''"
+                            v-decorator="[entry.item.key, { initialValue: getNumberValue(activeGroupKey, entry.item.key, entry.item.default) }]"
+                            :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : ''"
                             style="width: 100%"
                           />
                         </template>
-                        <template v-else-if="item.type === 'boolean'">
+                        <template v-else-if="entry.item.type === 'boolean'">
                           <a-switch
-                            v-decorator="[item.key, { valuePropName: 'checked', initialValue: getBoolValue(activeGroupKey, item.key, item.default) }]"
+                            v-decorator="[entry.item.key, { valuePropName: 'checked', initialValue: getBoolValue(activeGroupKey, entry.item.key, entry.item.default) }]"
                           />
                         </template>
-                        <template v-else-if="item.type === 'select'">
+                        <template v-else-if="entry.item.type === 'select'">
                           <a-select
-                            v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) || item.default }]"
-                            :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : $t('settings.pleaseSelect')"
-                            @change="onSelectFieldChange(item, $event)"
+                            v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) || entry.item.default }]"
+                            :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : $t('settings.pleaseSelect')"
+                            @change="onSelectFieldChange(entry.item, $event)"
                           >
                             <a-select-option
-                              v-for="opt in getSelectOptions(item)"
+                              v-for="opt in getSelectOptions(entry.item)"
                               :key="opt.value"
                               :value="opt.value"
                             >
@@ -335,8 +379,48 @@
                             </a-select-option>
                           </a-select>
                         </template>
-                        <div class="field-default" v-if="item.default && item.type !== 'boolean' && item.type !== 'password'">
-                          {{ $t('settings.default') }}: {{ item.default }}
+                        <template v-else-if="entry.item.type === 'market_multiselect'">
+                          <a-checkbox-group
+                            v-decorator="[entry.item.key, { initialValue: getCsvListValue(activeGroupKey, entry.item.key, entry.item.default) }]"
+                            class="market-module-grid"
+                          >
+                            <div
+                              v-for="market in getMarketModuleRows(entry.item)"
+                              :key="market.key"
+                              class="market-module-row"
+                            >
+                              <div class="market-module-main">
+                                <a-checkbox :value="market.key">
+                                  <span class="market-module-label">{{ marketModuleLabel(market) }}</span>
+                                </a-checkbox>
+                                <a-tag :color="marketStatusColor(market.status)">
+                                  {{ marketStatusText(market.status) }}
+                                </a-tag>
+                              </div>
+                              <div class="market-module-desc">{{ marketModuleDescription(market) }}</div>
+                              <div class="market-module-meta">
+                                <span>{{ market.symbol_hint }}</span>
+                                <span v-if="market.live_brokers && market.live_brokers.length">
+                                  {{ marketLiveText(market) }}
+                                </span>
+                                <span v-else>{{ marketResearchOnlyText() }}</span>
+                              </div>
+                              <div v-if="market.data_sources && market.data_sources.length" class="market-data-source-list">
+                                <span
+                                  v-for="source in market.data_sources"
+                                  :key="source.key"
+                                  class="market-data-source"
+                                  :class="{ configured: source.configured, missing: !source.configured && (source.required || source.recommended) }"
+                                >
+                                  {{ marketSourceLabel(source) }}
+                                  <small>{{ sourceStatusText(source) }}</small>
+                                </span>
+                              </div>
+                            </div>
+                          </a-checkbox-group>
+                        </template>
+                        <div class="field-default" v-if="entry.item.default && entry.item.type !== 'boolean' && entry.item.type !== 'password'">
+                          {{ $t('settings.default') }}: {{ entry.item.default }}
                         </div>
                       </a-form-item>
                     </a-col>
@@ -346,79 +430,83 @@
 
               <a-row v-else :gutter="24">
                 <a-col
+                  v-for="entry in currentDisplayEntries"
+                  :key="entry.key"
                   :xs="24"
                   :sm="24"
-                  :md="12"
-                  :lg="12"
-                  v-for="item in currentGroup.items"
-                  :key="item.key"
+                  :md="entry.type === 'heading' ? 24 : 12"
+                  :lg="entry.type === 'heading' ? 24 : 12"
                 >
-                  <a-form-item>
+                  <div v-if="entry.type === 'heading'" class="settings-subsection-heading">
+                    <span>{{ entry.title }}</span>
+                    <small>{{ entry.description }}</small>
+                  </div>
+                  <a-form-item v-else>
                     <template slot="label">
                       <span class="form-label-with-tooltip">
-                        <span class="label-text">{{ getItemLabel(activeGroupKey, item) }}</span>
-                        <a-tooltip v-if="item.description" placement="top">
+                        <span class="label-text">{{ getItemLabel(activeGroupKey, entry.item) }}</span>
+                        <a-tooltip v-if="entry.item.description" placement="top">
                           <template slot="title">
-                            {{ getItemDescription(activeGroupKey, item) }}
+                            {{ getItemDescription(activeGroupKey, entry.item) }}
                           </template>
                           <a-icon type="question-circle" class="help-icon" />
                         </a-tooltip>
                         <a
-                          v-if="item.link"
-                          :href="item.link"
+                          v-if="entry.item.link"
+                          :href="entry.item.link"
                           target="_blank"
                           rel="noopener noreferrer"
                           class="api-link"
                           @click.stop
                         >
                           <a-icon type="link" />
-                          {{ getLinkText(item.link_text) }}
+                          {{ getLinkText(entry.item.link_text) }}
                         </a>
                       </span>
                     </template>
-                    <template v-if="item.type === 'text'">
+                    <template v-if="entry.item.type === 'text'">
                       <a-input
-                        v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) }]"
-                        :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : ''"
+                        v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) }]"
+                        :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : ''"
                         allowClear
                       />
                     </template>
-                    <template v-else-if="item.type === 'password'">
+                    <template v-else-if="entry.item.type === 'password'">
                       <div class="password-field">
                         <a-input
-                          v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) }]"
-                          :type="passwordVisible[item.key] ? 'text' : 'password'"
+                          v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) }]"
+                          :type="passwordVisible[entry.item.key] ? 'text' : 'password'"
                           :placeholder="$t('settings.inputApiKey')"
                           allowClear
                         >
                           <a-icon
                             slot="suffix"
-                            :type="passwordVisible[item.key] ? 'eye' : 'eye-invisible'"
-                            @click="togglePasswordVisible(item.key)"
+                            :type="passwordVisible[entry.item.key] ? 'eye' : 'eye-invisible'"
+                            @click="togglePasswordVisible(entry.item.key)"
                             style="cursor: pointer"
                           />
                         </a-input>
                       </div>
                     </template>
-                    <template v-else-if="item.type === 'number'">
+                    <template v-else-if="entry.item.type === 'number'">
                       <a-input-number
-                        v-decorator="[item.key, { initialValue: getNumberValue(activeGroupKey, item.key, item.default) }]"
-                        :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : ''"
+                        v-decorator="[entry.item.key, { initialValue: getNumberValue(activeGroupKey, entry.item.key, entry.item.default) }]"
+                        :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : ''"
                         style="width: 100%"
                       />
                     </template>
-                    <template v-else-if="item.type === 'boolean'">
+                    <template v-else-if="entry.item.type === 'boolean'">
                       <a-switch
-                        v-decorator="[item.key, { valuePropName: 'checked', initialValue: getBoolValue(activeGroupKey, item.key, item.default) }]"
+                        v-decorator="[entry.item.key, { valuePropName: 'checked', initialValue: getBoolValue(activeGroupKey, entry.item.key, entry.item.default) }]"
                       />
                     </template>
-                    <template v-else-if="item.type === 'select'">
+                    <template v-else-if="entry.item.type === 'select'">
                       <a-select
-                        v-decorator="[item.key, { initialValue: getFieldValue(activeGroupKey, item.key) || item.default }]"
-                        :placeholder="item.default ? `${$t('settings.default')}: ${item.default}` : $t('settings.pleaseSelect')"
+                        v-decorator="[entry.item.key, { initialValue: getFieldValue(activeGroupKey, entry.item.key) || entry.item.default }]"
+                        :placeholder="entry.item.default ? `${$t('settings.default')}: ${entry.item.default}` : $t('settings.pleaseSelect')"
                       >
                         <a-select-option
-                          v-for="opt in getSelectOptions(item)"
+                          v-for="opt in getSelectOptions(entry.item)"
                           :key="opt.value"
                           :value="opt.value"
                         >
@@ -426,8 +514,48 @@
                         </a-select-option>
                       </a-select>
                     </template>
-                    <div class="field-default" v-if="item.default && item.type !== 'boolean' && item.type !== 'password'">
-                      {{ $t('settings.default') }}: {{ item.default }}
+                    <template v-else-if="entry.item.type === 'market_multiselect'">
+                      <a-checkbox-group
+                        v-decorator="[entry.item.key, { initialValue: getCsvListValue(activeGroupKey, entry.item.key, entry.item.default) }]"
+                        class="market-module-grid"
+                      >
+                        <div
+                          v-for="market in getMarketModuleRows(entry.item)"
+                          :key="market.key"
+                          class="market-module-row"
+                        >
+                          <div class="market-module-main">
+                            <a-checkbox :value="market.key">
+                              <span class="market-module-label">{{ marketModuleLabel(market) }}</span>
+                            </a-checkbox>
+                            <a-tag :color="marketStatusColor(market.status)">
+                              {{ marketStatusText(market.status) }}
+                            </a-tag>
+                          </div>
+                          <div class="market-module-desc">{{ marketModuleDescription(market) }}</div>
+                          <div class="market-module-meta">
+                            <span>{{ market.symbol_hint }}</span>
+                            <span v-if="market.live_brokers && market.live_brokers.length">
+                              {{ marketLiveText(market) }}
+                            </span>
+                            <span v-else>{{ marketResearchOnlyText() }}</span>
+                          </div>
+                          <div v-if="market.data_sources && market.data_sources.length" class="market-data-source-list">
+                            <span
+                              v-for="source in market.data_sources"
+                              :key="source.key"
+                              class="market-data-source"
+                              :class="{ configured: source.configured, missing: !source.configured && (source.required || source.recommended) }"
+                            >
+                              {{ marketSourceLabel(source) }}
+                              <small>{{ sourceStatusText(source) }}</small>
+                            </span>
+                          </div>
+                        </div>
+                      </a-checkbox-group>
+                    </template>
+                    <div class="field-default" v-if="entry.item.default && entry.item.type !== 'boolean' && entry.item.type !== 'password'">
+                      {{ $t('settings.default') }}: {{ entry.item.default }}
                     </div>
                   </a-form-item>
                 </a-col>
@@ -475,6 +603,7 @@
 
 <script>
 import { getSettingsSchema, getSettingsValues, saveSettings, getOpenRouterBalance } from '@/api/settings'
+import { getMarketModules } from '@/api/marketModules'
 import { baseMixin } from '@/store/app-mixin'
 
 export default {
@@ -493,6 +622,7 @@ export default {
       // the right-side detail pane into "search results" mode.
       searchKeyword: '',
       passwordVisible: {},
+      marketModules: [],
       showRestartTip: false,
       // OpenRouter 余额
       balanceLoading: false,
@@ -521,6 +651,12 @@ export default {
     // Currently selected group object (right-side detail content).
     currentGroup () {
       return this.sortedSchema[this.activeGroupKey] || null
+    },
+    currentDisplayEntries () {
+      const items = this.currentGroup && Array.isArray(this.currentGroup.items)
+        ? this.currentGroup.items
+        : []
+      return this.buildSettingEntries(items)
     },
     // Flattened, filtered search hits. Match is case-insensitive against the
     // localized label, the localized description and the raw ENV key, so
@@ -577,7 +713,7 @@ export default {
     aiProviderAlertDesc () {
       return this.tOr(
         'settings.llm.currentProviderDesc',
-        'Only the selected provider fields are shown below. Hidden provider credentials are kept unchanged when you save.'
+        'Switching providers keeps the other provider settings saved; switch back anytime to edit them.'
       )
     },
     aiSections () {
@@ -615,7 +751,12 @@ export default {
           description: this.tOr('settings.llm.searchSectionDesc', 'Optional search keys used to enrich AI analysis with market news.'),
           items: searchItems
         }
-      ].filter(section => section.items.length > 0)
+      ]
+        .filter(section => section.items.length > 0)
+        .map(section => ({
+          ...section,
+          entries: this.buildSettingEntries(section.items)
+        }))
     }
   },
   beforeCreate () {
@@ -649,6 +790,34 @@ export default {
       return key.startsWith('SEARCH_') ||
         key === 'TAVILY_API_KEYS' ||
         key === 'SERPAPI_KEYS'
+    },
+    buildSettingEntries (items) {
+      const basicItems = (items || []).filter(item => !item.is_advanced)
+      const advancedItems = (items || []).filter(item => item.is_advanced)
+      const entries = basicItems.map(item => ({
+        type: 'field',
+        key: `field-${item.key}`,
+        item
+      }))
+
+      if (advancedItems.length > 0) {
+        entries.push({
+          type: 'heading',
+          key: 'advanced-heading',
+          title: this.tOr('settings.advanced.title', 'More settings'),
+          description: this.tOr(
+            'settings.advanced.description',
+            'Optional integrations, endpoints, and tuning controls remain available here.'
+          )
+        })
+        entries.push(...advancedItems.map(item => ({
+          type: 'field',
+          key: `advanced-${item.key}`,
+          item
+        })))
+      }
+
+      return entries
     },
     onSelectFieldChange (item, value) {
       if (item && item.key === 'LLM_PROVIDER') {
@@ -704,9 +873,10 @@ export default {
     async loadSettings () {
       this.loading = true
       try {
-        const [schemaRes, valuesRes] = await Promise.all([
+        const [schemaRes, valuesRes, marketModulesRes] = await Promise.all([
           getSettingsSchema(),
-          getSettingsValues()
+          getSettingsValues(),
+          getMarketModules().catch(() => null)
         ])
 
         if (schemaRes.code === 1) {
@@ -716,6 +886,10 @@ export default {
         if (valuesRes.code === 1) {
           this.values = valuesRes.data
           this.selectedLlmProvider = (this.values.ai && this.values.ai.LLM_PROVIDER) || 'openrouter'
+        }
+
+        if (marketModulesRes && marketModulesRes.code === 1 && marketModulesRes.data) {
+          this.marketModules = marketModulesRes.data.markets || []
         }
 
         // After a fresh load: if no group has been picked yet (first mount)
@@ -813,6 +987,99 @@ export default {
       return groupValues[key] || ''
     },
 
+    getCsvListValue (groupKey, key, defaultVal) {
+      const raw = this.getFieldValue(groupKey, key) || defaultVal || ''
+      if (Array.isArray(raw)) return raw
+      return String(raw)
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+    },
+
+    getMarketModuleRows (item) {
+      const byKey = {}
+      for (const market of this.marketModules || []) {
+        if (market && market.key) byKey[market.key] = market
+      }
+      const options = this.getSelectOptions(item)
+      return options.map(opt => {
+        const module = byKey[opt.value]
+        if (module) {
+          return {
+            ...module,
+            label: module.label || opt.label
+          }
+        }
+        return {
+          key: opt.value,
+          label: opt.label,
+          description: '',
+          symbol_hint: opt.value,
+          status: 'partial',
+          data_sources: [],
+          live_brokers: [],
+          features: []
+        }
+      })
+    },
+
+    marketStatusColor (status) {
+      const map = {
+        ready: 'green',
+        partial: 'orange',
+        blocked: 'red',
+        disabled: 'default'
+      }
+      return map[status] || 'blue'
+    },
+
+    marketStatusText (status) {
+      const map = {
+        ready: this.tOr('settings.market.status.ready', 'Ready'),
+        partial: this.tOr('settings.market.status.partial', 'Needs setup'),
+        blocked: this.tOr('settings.market.status.blocked', 'Blocked'),
+        disabled: this.tOr('settings.market.status.disabled', 'Disabled')
+      }
+      return map[status] || status || 'Unknown'
+    },
+
+    marketModuleLabel (market) {
+      if (!market) return ''
+      const key = market.key || market.value
+      const i18nKey = `dashboard.analysis.market.${key}`
+      const translated = this.$t(i18nKey)
+      return translated !== i18nKey ? translated : (market.label || key || '')
+    },
+
+    marketModuleDescription (market) {
+      if (!market) return ''
+      const key = market.key || market.value
+      return this.tOr(`settings.market.desc.${key}`, market.description || '')
+    },
+
+    marketLiveText (market) {
+      const brokers = Array.isArray(market && market.live_brokers) ? market.live_brokers.join(', ') : ''
+      return `${this.tOr('settings.market.livePrefix', 'Live')}: ${brokers}`
+    },
+
+    marketResearchOnlyText () {
+      return this.tOr('settings.market.researchOnly', 'Research / paper only')
+    },
+
+    marketSourceLabel (source) {
+      if (!source) return ''
+      const key = source.key || source.value
+      return this.tOr(`settings.market.sourceLabel.${key}`, source.label || key || '')
+    },
+
+    sourceStatusText (source) {
+      if (source.built_in) return this.tOr('settings.market.source.builtin', 'built-in')
+      if (source.configured) return this.tOr('settings.market.source.configured', 'configured')
+      if (source.required) return this.tOr('settings.market.source.required', 'required')
+      if (source.recommended) return this.tOr('settings.market.source.recommended', 'recommended')
+      return this.tOr('settings.market.source.optional', 'optional')
+    },
+
     togglePasswordVisible (key) {
       this.$set(this.passwordVisible, key, !this.passwordVisible[key])
     },
@@ -866,6 +1133,8 @@ export default {
                 // 布尔值转字符串
                 if (item.type === 'boolean') {
                   value = value ? 'True' : 'False'
+                } else if (item.type === 'market_multiselect') {
+                  value = Array.isArray(value) ? value.join(',') : String(value || '')
                 }
                 data[groupKey][item.key] = value
               }
@@ -1070,6 +1339,27 @@ export default {
 
       .anticon {
         font-size: 11px;
+      }
+    }
+
+    .settings-subsection-heading {
+      margin: 6px 0 16px;
+      padding-top: 18px;
+      border-top: 1px solid #f1f5f9;
+
+      span {
+        display: block;
+        color: #1e3a5f;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      small {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.6;
       }
     }
   }
@@ -1292,6 +1582,91 @@ export default {
       font-size: 12px;
       color: #94a3b8;
     }
+
+    .market-module-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .market-module-row {
+      min-height: 132px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f8fafc;
+      transition: border-color 0.2s, background 0.2s;
+
+      &:hover {
+        border-color: rgba(24, 144, 255, 0.45);
+        background: #ffffff;
+      }
+    }
+
+    .market-module-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .market-module-label {
+      color: #1e3a5f;
+      font-weight: 700;
+    }
+
+    .market-module-desc {
+      min-height: 34px;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .market-module-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      color: #475569;
+      font-size: 12px;
+    }
+
+    .market-data-source-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .market-data-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 7px;
+      border: 1px solid #dbeafe;
+      border-radius: 4px;
+      color: #2563eb;
+      background: #eff6ff;
+      font-size: 11px;
+
+      small {
+        color: #64748b;
+      }
+
+      &.configured {
+        border-color: #bbf7d0;
+        color: #15803d;
+        background: #f0fdf4;
+      }
+
+      &.missing {
+        border-color: #fed7aa;
+        color: #c2410c;
+        background: #fff7ed;
+      }
+    }
   }
 
   .settings-footer {
@@ -1380,6 +1755,18 @@ export default {
       .search-result-group-tag {
         background: rgba(88, 166, 255, 0.18);
         color: #58a6ff;
+      }
+
+      .settings-subsection-heading {
+        border-top-color: rgba(255, 255, 255, 0.08);
+
+        span {
+          color: #e0e6ed;
+        }
+
+        small {
+          color: #8b949e;
+        }
       }
     }
 
@@ -1472,6 +1859,47 @@ export default {
 
       .field-default {
         color: #6e7681;
+      }
+
+      .market-module-row {
+        background: #161b22;
+        border-color: rgba(255, 255, 255, 0.08);
+
+        &:hover {
+          border-color: rgba(88, 166, 255, 0.45);
+          background: #1f2630;
+        }
+      }
+
+      .market-module-label {
+        color: #e0e6ed;
+      }
+
+      .market-module-desc,
+      .market-module-meta {
+        color: #8b949e;
+      }
+
+      .market-data-source {
+        border-color: rgba(88, 166, 255, 0.25);
+        color: #79c0ff;
+        background: rgba(88, 166, 255, 0.1);
+
+        small {
+          color: #8b949e;
+        }
+
+        &.configured {
+          border-color: rgba(63, 185, 80, 0.35);
+          color: #7ee787;
+          background: rgba(46, 160, 67, 0.12);
+        }
+
+        &.missing {
+          border-color: rgba(210, 153, 34, 0.35);
+          color: #f2cc60;
+          background: rgba(187, 128, 9, 0.12);
+        }
       }
     }
 

@@ -821,13 +821,14 @@ class="analyze-button">
 <script>
 import { mapGetters, mapState } from 'vuex'
 import { getUserInfo } from '@/api/login'
-import { getWatchlist, addWatchlist, removeWatchlist, getWatchlistPrices, getMarketTypes, searchSymbols, getHotSymbols } from '@/api/market'
+import { getWatchlist, addWatchlist, removeWatchlist, getWatchlistPrices, searchSymbols, getHotSymbols } from '@/api/market'
 import { getPositions, addPosition, getMonitors, addMonitor, updateMonitor, deleteMonitor } from '@/api/portfolio'
 import { fastAnalyze, getAllAnalysisHistory, deleteAnalysisHistory } from '@/api/fast-analysis'
 import { getMarketSentiment, getEconomicCalendar } from '@/api/global-market'
 import FastAnalysisReport from './components/FastAnalysisReport.vue'
 import CopilotWorkbench from './components/CopilotWorkbench.vue'
 import sessionCache from '@/utils/sessionCache'
+import { loadEnabledMarketOptions, firstMarketValue } from '@/utils/marketModules'
 
 // Cache only the context panels that remain on the default AI analysis screen.
 // Market heatmaps and global index tickers are not loaded by default because
@@ -1013,13 +1014,13 @@ export default {
       // canonicalises bare bases (BTC -> BTC/USDT) but storing the canonical
       // shape from the start makes UI / dedupe / search far less surprising.
       const examples = {
-        USStock: 'e.g. AAPL, MSFT, NVDA',
-        CNStock: 'e.g. 600519, 000001, 300750',
-        HKStock: 'e.g. 00700, 09988, 03690',
-        Crypto: 'e.g. BTC/USDT, ETH/USDT, SOL/USDT',
-        Forex: 'e.g. EURUSD, GBPUSD',
-        Futures: 'e.g. GC, CL, ES',
-        MOEX: 'e.g. SBER, GAZP, LKOH'
+        USStock: this.i18nText('dashboard.analysis.modal.addStock.example.USStock', 'e.g. AAPL, MSFT, NVDA'),
+        CNStock: this.i18nText('dashboard.analysis.modal.addStock.example.CNStock', 'e.g. 600519, 000001, 300750'),
+        HKStock: this.i18nText('dashboard.analysis.modal.addStock.example.HKStock', 'e.g. 00700, 09988, 03690'),
+        Crypto: this.i18nText('dashboard.analysis.modal.addStock.example.Crypto', 'e.g. BTC/USDT, ETH/USDT, SOL/USDT'),
+        Forex: this.i18nText('dashboard.analysis.modal.addStock.example.Forex', 'e.g. EURUSD, GBPUSD'),
+        Futures: this.i18nText('dashboard.analysis.modal.addStock.example.Futures', 'e.g. GC, CL, ES'),
+        MOEX: this.i18nText('dashboard.analysis.modal.addStock.example.MOEX', 'e.g. SBER, GAZP, LKOH')
       }
       const fallback = this.$t('dashboard.analysis.modal.addStock.searchOrInputPlaceholder')
       return examples[this.selectedMarketTab] || fallback
@@ -1039,18 +1040,28 @@ export default {
       if (/^\d{6}$/.test(raw) && this.selectedMarketTab !== 'CNStock') {
         const hasCN = (this.marketTypes || []).some(m => m.value === 'CNStock')
         return {
-          msg: `"${raw}" 看起来是 A 股代码（6 位数字），当前却选在 ${this.selectedMarketTab} 市场。/ Looks like a CN A-share, not ${this.selectedMarketTab}.`,
+          msg: this.i18nText('dashboard.analysis.modal.addStock.mismatch.cn', '"{symbol}" looks like a CN A-share code (6 digits), not {market}.', {
+            symbol: raw,
+            market: this.marketLabel(this.selectedMarketTab)
+          }),
           suggestedMarket: hasCN ? 'CNStock' : '',
-          switchLabel: '切换到 CNStock / Switch to CNStock'
+          switchLabel: this.i18nText('dashboard.analysis.modal.addStock.switchTo', 'Switch to {market}', {
+            market: this.marketLabel('CNStock')
+          })
         }
       }
       // Explicit .HK suffix => must be HKStock.
       if (raw.endsWith('.HK') && this.selectedMarketTab !== 'HKStock') {
         const hasHK = (this.marketTypes || []).some(m => m.value === 'HKStock')
         return {
-          msg: `"${raw}" 看起来是港股代码（HK 后缀），当前却选在 ${this.selectedMarketTab} 市场。/ Looks like an HK stock, not ${this.selectedMarketTab}.`,
+          msg: this.i18nText('dashboard.analysis.modal.addStock.mismatch.hk', '"{symbol}" looks like a Hong Kong stock code (.HK suffix), not {market}.', {
+            symbol: raw,
+            market: this.marketLabel(this.selectedMarketTab)
+          }),
           suggestedMarket: hasHK ? 'HKStock' : '',
-          switchLabel: '切换到 HKStock / Switch to HKStock'
+          switchLabel: this.i18nText('dashboard.analysis.modal.addStock.switchTo', 'Switch to {market}', {
+            market: this.marketLabel('HKStock')
+          })
         }
       }
       // Crypto on the Crypto tab without a "/" => the backend will canonicalise
@@ -1060,7 +1071,10 @@ export default {
       // No suggestedMarket; renders as a plain hint without a switch button.
       if (this.selectedMarketTab === 'Crypto' && raw && !raw.includes('/')) {
         return {
-          msg: `加密货币建议用交易对形式输入（如 BTC/USDT）。提交时若只填 "${raw}"，系统会默认补全为 ${raw}/USDT。/ Crypto symbols should be entered as BASE/QUOTE; "${raw}" will be auto-completed to ${raw}/USDT.`,
+          msg: this.i18nText('dashboard.analysis.modal.addStock.mismatch.cryptoPairHint', 'Crypto symbols should be entered as BASE/QUOTE, such as BTC/USDT. If you submit "{symbol}", it will be auto-completed to {pair}.', {
+            symbol: raw,
+            pair: `${raw}/USDT`
+          }),
           suggestedMarket: '',
           switchLabel: ''
         }
@@ -2166,13 +2180,20 @@ export default {
     // a round-trip and gives clearer guidance to the user. Returns an error
     // string when the pair is implausible, or '' when it looks OK.
     _validateWatchlistPair (market, symbol) {
-      if (!market || !symbol) return 'Missing market or symbol'
+      if (!market || !symbol) return this.i18nText('dashboard.analysis.modal.addStock.missingMarketOrSymbol', 'Missing market or symbol')
       // Pure 6-digit codes are CN A-shares and must not go to Crypto / US / etc.
       if (/^\d{6}$/.test(symbol) && market !== 'CNStock') {
-        return `"${symbol}" 看起来是 A 股代码，市场应选择 CNStock 而不是 ${market}。/ "${symbol}" looks like a CN A-share; choose CNStock instead of ${market}.`
+        return this.i18nText('dashboard.analysis.modal.addStock.validate.cn', '"{symbol}" looks like a CN A-share; choose {target} instead of {market}.', {
+          symbol,
+          market: this.marketLabel(market),
+          target: this.marketLabel('CNStock')
+        })
       }
       if (symbol.toUpperCase().endsWith('.HK') && market !== 'HKStock') {
-        return `"${symbol}" 看起来是港股代码，市场应选择 HKStock。/ "${symbol}" looks like a HK stock; choose HKStock.`
+        return this.i18nText('dashboard.analysis.modal.addStock.validate.hk', '"{symbol}" looks like a Hong Kong stock; choose {target}.', {
+          symbol,
+          target: this.marketLabel('HKStock')
+        })
       }
       return ''
     },
@@ -2443,44 +2464,25 @@ export default {
         this.$message.error(this.$t('dashboard.analysis.message.removeStockFailed'))
       }
     },
+    i18nText (key, fallback, values) {
+      const translated = this.$t ? this.$t(key, values) : key
+      if (translated && translated !== key) return translated
+      return Object.entries(values || {}).reduce((text, [name, value]) => {
+        return text.replace(new RegExp(`\\{${name}\\}`, 'g'), value)
+      }, fallback)
+    },
     getMarketName (market) {
-      return this.$t(`dashboard.analysis.market.${market}`) || market
+      return this.i18nText(`dashboard.analysis.market.${market}`, market || '')
     },
     formatNumber (num) {
       if (typeof num === 'string') return num
       return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     },
     async loadMarketTypes () {
-      try {
-        const res = await getMarketTypes()
-        if (res && res.code === 1 && res.data && Array.isArray(res.data)) {
-          this.marketTypes = res.data.map(item => ({
-            value: item.value,
-            i18nKey: item.i18nKey || `dashboard.analysis.market.${item.value}`
-          }))
-        } else {
-          this.marketTypes = [
-            { value: 'USStock', i18nKey: 'dashboard.analysis.market.USStock' },
-            { value: 'CNStock', i18nKey: 'dashboard.analysis.market.CNStock' },
-            { value: 'HKStock', i18nKey: 'dashboard.analysis.market.HKStock' },
-            { value: 'Crypto', i18nKey: 'dashboard.analysis.market.Crypto' },
-            { value: 'Forex', i18nKey: 'dashboard.analysis.market.Forex' },
-            { value: 'Futures', i18nKey: 'dashboard.analysis.market.Futures' }
-          ]
-        }
-      } catch (error) {
-        this.marketTypes = [
-          { value: 'USStock', i18nKey: 'dashboard.analysis.market.USStock' },
-          { value: 'CNStock', i18nKey: 'dashboard.analysis.market.CNStock' },
-          { value: 'HKStock', i18nKey: 'dashboard.analysis.market.HKStock' },
-          { value: 'Crypto', i18nKey: 'dashboard.analysis.market.Crypto' },
-          { value: 'Forex', i18nKey: 'dashboard.analysis.market.Forex' },
-          { value: 'Futures', i18nKey: 'dashboard.analysis.market.Futures' }
-        ]
-      }
+      this.marketTypes = await loadEnabledMarketOptions({ includeFeatures: ['research'] })
 
       if (this.marketTypes.length > 0 && !this.selectedMarketTab) {
-        this.selectedMarketTab = this.marketTypes[0].value
+        this.selectedMarketTab = firstMarketValue(this.marketTypes)
       }
     }
   },
