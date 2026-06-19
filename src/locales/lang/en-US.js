@@ -3359,6 +3359,8 @@ const locale = {
   // Settings fields - AI
   'settings.field.LLM_PROVIDER': 'LLM Provider',
   'settings.field.AI_CODE_GEN_MODEL': 'Code Generation Model',
+  'settings.field.LLM_PROXY_URL': 'LLM Proxy URL',
+  'settings.field.LLM_USE_SYSTEM_PROXY': 'Use System Proxy for LLM',
   'settings.field.OPENAI_API_KEY': 'OpenAI API Key',
   'settings.field.OPENAI_MODEL': 'OpenAI Model',
   'settings.field.OPENAI_BASE_URL': 'OpenAI Base URL',
@@ -3453,6 +3455,8 @@ const locale = {
   'settings.desc.ATLASCLOUD_MODEL': 'AtlasCloud model ID. Use the exact ID listed by AtlasCloud, e.g. openai/gpt-5.4 or deepseek-v3.',
   'settings.desc.ATLASCLOUD_BASE_URL': 'AtlasCloud OpenAI-compatible endpoint URL. Must include /v1.',
   'settings.desc.AI_ANALYSIS_CONSENSUS_TIMEFRAMES': 'Multi-timeframe consensus for fast AI analysis. Comma-separated, e.g. 1D,4H',
+  'settings.desc.LLM_PROXY_URL': 'Optional dedicated proxy for LLM provider requests. Leave empty for direct LLM access; PROXY_URL is reserved for market data and exchange APIs.',
+  'settings.desc.LLM_USE_SYSTEM_PROXY': 'Let LLM requests inherit HTTP_PROXY / HTTPS_PROXY / ALL_PROXY. Keep disabled unless that proxy is reachable from the backend.',
   'settings.desc.ENABLE_REFLECTION_WORKER': 'Enable background worker for automatic trade reflection and calibration',
   'settings.desc.REFLECTION_WORKER_INTERVAL_SEC': 'Reflection worker run interval in seconds (86400 = 1 day)',
   'settings.desc.REFLECTION_MIN_AGE_DAYS': 'Only validate analyses older than N days',
@@ -5582,7 +5586,7 @@ const locale = {
   'settings.desc.AGENT_MEMORY_W_SIM': 'Weight of similarity score in memory ranking (0-1)',
   'settings.desc.AGENT_MEMORY_W_RECENCY': 'Weight of recency in memory ranking (0-1)',
   'settings.desc.AGENT_MEMORY_W_RETURNS': 'Weight of returns performance in memory ranking (0-1)',
-  'settings.desc.PROXY_URL': 'Full proxy URL (overrides above configuration if set)',
+  'settings.desc.PROXY_URL': 'Proxy URL for market data, exchange, and broker APIs. LLM calls are direct by default; use LLM Proxy URL only when your model provider needs a proxy.',
   'settings.desc.SEARCH_MAX_RESULTS': 'Maximum number of search results returned',
   'settings.desc.SEARCH_GOOGLE_API_KEY': 'Google Custom Search API key',
   'settings.desc.SEARCH_GOOGLE_CX': 'Google Programmable Search Engine ID (CX)',
@@ -5921,4 +5925,3 @@ export default {
   ...components,
   ...locale
 }
-

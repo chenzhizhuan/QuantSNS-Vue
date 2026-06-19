@@ -2538,6 +2538,8 @@ const locale = {
 // Settings fields - AI
 'settings.field.LLM_PROVIDER': 'LLM 提供商',
 'settings.field.AI_CODE_GEN_MODEL': '代碼生成模型',
+'settings.field.LLM_PROXY_URL': 'LLM 專用代理 URL',
+'settings.field.LLM_USE_SYSTEM_PROXY': 'LLM 使用系統代理',
 'settings.field.OPENAI_API_KEY': 'OpenAI API Key',
 'settings.field.OPENAI_MODEL': 'OpenAI 模型',
 'settings.field.OPENAI_BASE_URL': 'OpenAI Base URL',
@@ -2668,7 +2670,9 @@ const locale = {
 'settings.desc.GROK_MODEL': '如 grok-beta、grok-2 等',
 'settings.desc.GROK_BASE_URL': 'xAI Grok API 端點地址',
 'settings.desc.AI_ANALYSIS_CONSENSUS_TIMEFRAMES': '快速 AI 分析多周期共識，逗號分隔，如 1D,4H',
-'settings.desc.PROXY_URL': '完整代理URL（設置後覆蓋上面的配置）',
+'settings.desc.LLM_PROXY_URL': '可選，僅用於大模型供應商請求。留空表示 LLM 直連；PROXY_URL 僅用於行情、交易所和券商接口。',
+'settings.desc.LLM_USE_SYSTEM_PROXY': '開啟後 LLM 請求會繼承 HTTP_PROXY / HTTPS_PROXY / ALL_PROXY。除非後端能存取該代理，否則建議關閉。',
+'settings.desc.PROXY_URL': '行情、交易所和券商接口使用的代理地址。大模型默認直連；如需代理請填寫 LLM 專用代理 URL。',
 'settings.desc.SEARCH_PROVIDER': '網頁搜索提供商，用於AI研究功能。博查(Bocha)推薦用於A股新聞',
 'settings.desc.SEARCH_MAX_RESULTS': '搜索返回的最大結果數',
 'settings.desc.TAVILY_API_KEYS': 'Tavily搜索API密鑰，多個用逗號分隔可輪換。免費1000次/月',
@@ -5178,4 +5182,3 @@ export default {
 ...components,
 ...locale
 }
-
