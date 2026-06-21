@@ -21,6 +21,13 @@ export const asyncRouterMap = [
         component: () => import('@/views/ai-asset-analysis'),
         meta: { title: 'menu.dashboard.aiAssetAnalysis', keepAlive: true, icon: 'appstore', permission: ['dashboard'] }
       },
+      // AI弹性选股（复刻 AI智能分析）
+      {
+        path: '/ai-elastic-stock',
+        name: 'AIElasticStock',
+        component: () => import('@/views/ai-elastic-stock'),
+        meta: { title: 'menu.dashboard.aiElasticStock', keepAlive: true, icon: 'appstore', permission: ['dashboard'] }
+      },
       // Unified strategy workspace entry.
       {
         path: '/strategy-center',
