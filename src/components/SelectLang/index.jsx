@@ -5,16 +5,16 @@ import { i18nRender } from '@/locales'
 import i18nMixin from '@/store/i18n-mixin'
 
 const locales = [
-  'en-US',
-  'ru-RU',
-  'ja-JP',
-  'ko-KR',
-  'vi-VN',
-  'th-TH',
-  'ar-SA',
-  'fr-FR',
-  'de-DE',
-  'zh-TW',
+  // 'en-US',
+  // 'ru-RU',
+  // 'ja-JP',
+  // 'ko-KR',
+  // 'vi-VN',
+  // 'th-TH',
+  // 'ar-SA',
+  // 'fr-FR',
+  // 'de-DE',
+  // 'zh-TW',
   'zh-CN'
 ]
 
