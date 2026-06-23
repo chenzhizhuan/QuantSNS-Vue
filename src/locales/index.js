@@ -3,18 +3,16 @@ import VueI18n from 'vue-i18n'
 import storage from 'store'
 import moment from 'moment'
 import enUS from './lang/en-US'
-import zhCN from './lang/zh-CN'
+import copilotOverrides from './copilot-overrides'
 
 Vue.use(VueI18n)
 
-export const defaultLang = 'zh-CN'
+export const defaultLang = 'en-US'
 
 const messages = {
   [defaultLang]: {
-    ...enUS
-  },
-  'zh-CN': {
-    ...zhCN
+    ...enUS,
+    ...(copilotOverrides[defaultLang] || {})
   }
 }
 
@@ -24,6 +22,7 @@ const localeLoaders = {
   'fr-FR': () => import('./lang/fr-FR.js'),
   'ja-JP': () => import('./lang/ja-JP.js'),
   'ko-KR': () => import('./lang/ko-KR.js'),
+  'ru-RU': () => import('./lang/ru-RU.js'),
   'th-TH': () => import('./lang/th-TH.js'),
   'vi-VN': () => import('./lang/vi-VN.js'),
   'zh-CN': () => import('./lang/zh-CN.js'),
@@ -32,12 +31,37 @@ const localeLoaders = {
 
 const i18n = new VueI18n({
   silentTranslationWarn: true,
+  silentFallbackWarn: true,
   locale: defaultLang,
-  fallbackLocale: 'zh-CN',
+  fallbackLocale: defaultLang,
   messages
 })
 
-const loadedLanguages = Object.keys(messages)
+const loadedLanguages = [defaultLang]
+
+function sanitizeLocaleMessage (message) {
+  if (Array.isArray(message)) {
+    return message
+      .map(item => sanitizeLocaleMessage(item))
+      .filter(item => item !== undefined)
+  }
+
+  if (message && typeof message === 'object') {
+    return Object.keys(message).reduce((result, key) => {
+      const value = sanitizeLocaleMessage(message[key])
+      if (value !== undefined) {
+        result[key] = value
+      }
+      return result
+    }, {})
+  }
+
+  if (typeof message === 'string') {
+    return message.includes('\uFFFD') ? undefined : message
+  }
+
+  return message
+}
 
 function setI18nLanguage (lang) {
   i18n.locale = lang
@@ -54,21 +78,39 @@ function setI18nLanguage (lang) {
   return lang
 }
 
+function mergeLocaleOverrides (lang) {
+  const overrides = copilotOverrides[lang]
+  if (!overrides) return
+  i18n.setLocaleMessage(lang, {
+    ...(i18n.getLocaleMessage(lang) || {}),
+    ...overrides
+  })
+}
+
 export async function loadLanguageAsync (lang = defaultLang) {
   storage.set('lang', lang)
-  if (i18n.locale === lang) return lang
+  if (i18n.locale === lang) {
+    mergeLocaleOverrides(lang)
+    return setI18nLanguage(lang)
+  }
 
   if (!loadedLanguages.includes(lang)) {
     const loadLocale = localeLoaders[lang]
     if (!loadLocale) return setI18nLanguage(defaultLang)
 
     const msg = await loadLocale()
-    const locale = msg.default
+    const locale = sanitizeLocaleMessage({
+      ...msg.default,
+      ...(copilotOverrides[lang] || {})
+    })
     i18n.setLocaleMessage(lang, locale)
     loadedLanguages.push(lang)
-    moment.updateLocale(locale.momentName, locale.momentLocale)
+    if (locale.momentName && locale.momentLocale) {
+      moment.updateLocale(locale.momentName, locale.momentLocale)
+    }
   }
 
+  mergeLocaleOverrides(lang)
   return setI18nLanguage(lang)
 }
 
