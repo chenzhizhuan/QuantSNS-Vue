@@ -1030,6 +1030,7 @@ export default {
         app: 'appstore',
         ai: 'robot',
         trading: 'stock',
+        market_modules: 'appstore',
         data_source: 'database',
         search: 'search',
         agent: 'experiment',

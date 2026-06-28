@@ -93,26 +93,23 @@
 <script>
 import AlpacaConnectForm from './forms/AlpacaConnectForm.vue'
 import IbkrConnectForm from './forms/IbkrConnectForm.vue'
-import Mt5ConnectForm from './forms/Mt5ConnectForm.vue'
 import BrokerAccountCard from './BrokerAccountCard.vue'
 import BrokerPositionsTable from './BrokerPositionsTable.vue'
 import BrokerOrdersTable from './BrokerOrdersTable.vue'
 
 const FORM_BY_BROKER = {
   alpaca: 'AlpacaConnectForm',
-  ibkr: 'IbkrConnectForm',
-  mt5: 'Mt5ConnectForm'
+  ibkr: 'IbkrConnectForm'
 }
 
 const DOCS = {
   alpaca: 'https://app.alpaca.markets/paper/dashboard/overview',
-  ibkr: 'https://www.interactivebrokers.com/en/trading/tws.php',
-  mt5: 'https://www.metaquotes.net/en/metatrader5'
+  ibkr: 'https://www.interactivebrokers.com/en/trading/tws.php'
 }
 
 export default {
   name: 'BrokerPanel',
-  components: { AlpacaConnectForm, IbkrConnectForm, Mt5ConnectForm, BrokerAccountCard, BrokerPositionsTable, BrokerOrdersTable },
+  components: { AlpacaConnectForm, IbkrConnectForm, BrokerAccountCard, BrokerPositionsTable, BrokerOrdersTable },
   props: {
     broker: { type: Object, required: true },
     status: { type: Object, default: () => null },

@@ -74,15 +74,7 @@ export default {
           { key: 'account', label: this.$t('brokerAccounts.kpi.account'), value: String(i.account || i.AccountCode || '--') }
         ]
       }
-      // mt5
-      return [
-        { key: 'balance', label: this.$t('brokerAccounts.kpi.balance'), value: money(i.balance, ccy) },
-        { key: 'equity', label: this.$t('brokerAccounts.kpi.equity'), value: money(i.equity, ccy) },
-        { key: 'margin', label: this.$t('brokerAccounts.kpi.margin'), value: money(i.margin, ccy) },
-        { key: 'free', label: this.$t('brokerAccounts.kpi.freeMargin'), value: money(i.margin_free, ccy), tone: 'accent' },
-        { key: 'leverage', label: this.$t('brokerAccounts.kpi.leverage'), value: i.leverage ? `1:${i.leverage}` : '--' },
-        { key: 'profit', label: this.$t('brokerAccounts.kpi.openPnl'), value: money(i.profit, ccy), tone: num(i.profit) >= 0 ? 'positive' : 'negative' }
-      ]
+      return []
     }
   },
   mounted () {

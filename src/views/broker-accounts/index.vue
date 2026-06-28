@@ -97,7 +97,7 @@ export default {
   },
   async mounted () {
     // IMPORTANT: resolve the desktop-broker policy BEFORE firing any
-    // /api/{ibkr,mt5}/status requests. On SaaS deployments those endpoints
+    // /api/ibkr/status requests. On SaaS deployments those endpoints
     // intentionally return a long bilingual rejection message which used to
     // surface as a misleading toast/console error during the initial load.
     await this.loadDesktopPolicy()
@@ -143,8 +143,8 @@ export default {
       }
     },
     async loadOne (id) {
-      // SaaS / cloud deployments disable IBKR + MT5 (no local TWS / MT5
-      // terminal reachable). Skip the network call entirely so users don't
+      // SaaS / cloud deployments disable IBKR (no local TWS/Gateway
+      // reachable). Skip the network call entirely so users don't
       // see the bilingual rejection payload in DevTools or as an error toast.
       if (this.isBrokerBlocked(id)) {
         this.$set(this.connectionMap, id, { connected: false, blocked: true })

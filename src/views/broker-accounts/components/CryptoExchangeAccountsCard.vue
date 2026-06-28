@@ -189,13 +189,8 @@ import { getAccountSnapshot } from '@/api/strategy'
 import ExchangeAccountModal from '@/components/ExchangeAccountModal/ExchangeAccountModal.vue'
 import ExchangeSignupModal from '@/components/ExchangeSignupModal/ExchangeSignupModal.vue'
 import RenameCredentialModal from '@/components/RenameCredentialModal/RenameCredentialModal.vue'
-import { getExchangeDisplayName } from '@/utils/exchangeCredential'
+import { CRYPTO_EXCHANGE_IDS, getExchangeDisplayName } from '@/utils/exchangeCredential'
 import moment from 'moment'
-
-const CRYPTO_EXCHANGE_IDS = new Set([
-  'binance', 'okx', 'bitget', 'bybit', 'coinbaseexchange',
-  'kraken', 'kucoin', 'gate', 'bitfinex', 'htx'
-])
 
 const DISPLAY_NAMES = {
   binance: 'Binance',

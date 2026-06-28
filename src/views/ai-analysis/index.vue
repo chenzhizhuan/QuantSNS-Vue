@@ -2077,11 +2077,15 @@ export default {
       try {
         const res = await getWatchlist({ userid: this.userId })
         if (res && res.code === 1 && res.data) {
+          const prevByKey = {}
+          ;(this.watchlist || []).forEach(item => {
+            prevByKey[`${item.market}:${item.symbol}`] = item
+          })
           this.watchlist = res.data.map(item => ({
             ...item,
-            price: 0,
-            change: 0,
-            changePercent: 0
+            price: prevByKey[`${item.market}:${item.symbol}`]?.price || 0,
+            change: prevByKey[`${item.market}:${item.symbol}`]?.change || 0,
+            changePercent: prevByKey[`${item.market}:${item.symbol}`]?.changePercent || 0
           }))
           await this.loadWatchlistPrices()
         }
@@ -2106,13 +2110,15 @@ export default {
 
         if (res && res.code === 1 && res.data) {
           const priceMap = {}
-          const pricesObj = {}
+          const pricesObj = { ...this.watchlistPrices }
           res.data.forEach(item => {
+            const price = Number(item.price || 0)
+            if (price <= 0) return
             priceMap[`${item.market}-${item.symbol}`] = item
-            // Also fill watchlistPrices object, using ":" as the key separator.
             pricesObj[`${item.market}:${item.symbol}`] = {
-              price: item.price || 0,
-              change: item.changePercent || 0
+              price,
+              change: item.changePercent || 0,
+              stale: !!item.stale
             }
           })
           this.watchlistPrices = pricesObj
@@ -2120,7 +2126,7 @@ export default {
           this.watchlist = this.watchlist.map(item => {
             const key = `${item.market}-${item.symbol}`
             const priceData = priceMap[key]
-            if (priceData) {
+            if (priceData && Number(priceData.price || 0) > 0) {
               return {
                 ...item,
                 price: priceData.price || 0,
@@ -2317,7 +2323,11 @@ export default {
           limit: 20
         })
         if (res && res.code === 1 && res.data && res.data.length > 0) {
-          this.symbolSearchResults = res.data
+          const usable = res.data.filter(this.isUsableSymbolSearchResult)
+          this.symbolSearchResults = usable
+          if (usable.length === 0) {
+            this.selectedSymbolForAdd = null
+          }
         } else {
           // Search returned nothing. Previously we silently fabricated a
           // synthetic result from the typed text, which made it too easy to
@@ -2390,6 +2400,16 @@ export default {
         symbol: symbol.symbol,
         name: symbol.name || symbol.symbol
       }
+    },
+    isUsableSymbolSearchResult (item) {
+      const market = item && item.market
+      const symbol = String((item && item.symbol) || '').trim().toUpperCase()
+      if (!market || !symbol) return false
+      if (market === 'CNStock') return /^\d{6}$/.test(symbol)
+      if (market === 'HKStock') return /^\d{1,5}(\.HK)?$/.test(symbol) || /^HK\d{1,5}$/.test(symbol)
+      if (market === 'USStock') return /^[A-Z][A-Z0-9.-]{0,9}$/.test(symbol)
+      if (market === 'Crypto') return /^[A-Z0-9]+\/[A-Z0-9]+$/.test(symbol)
+      return !/\s/.test(symbol)
     },
     async loadHotSymbols (market) {
       if (!market) {

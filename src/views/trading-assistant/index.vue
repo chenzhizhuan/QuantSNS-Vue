@@ -1580,14 +1580,6 @@ const BROKER_OPTIONS = [
   // { value: 'schwab', labelKey: 'schwab', name: 'Charles Schwab' },
 ]
 
-// Forex broker options
-const FOREX_BROKER_OPTIONS = [
-  { value: 'mt5', labelKey: 'mt5', name: 'MetaTrader 5' }
-  // Future forex brokers can be added here:
-  // { value: 'mt4', labelKey: 'mt4', name: 'MetaTrader 4' },
-  // { value: 'ctrader', labelKey: 'ctrader', name: 'cTrader' },
-]
-
 export default {
   name: 'TradingAssistant',
   mixins: [baseMixin],
@@ -1682,13 +1674,9 @@ export default {
     isIBKRMarket () {
       return this.selectedMarketCategory === 'USStock'
     },
-    // Check if current market uses MT5 (Forex)
-    isMT5Market () {
-      return this.selectedMarketCategory === 'Forex'
-    },
     // Check if current market uses any broker (not crypto exchange)
     isBrokerMarket () {
-      return this.isIBKRMarket || this.isMT5Market
+      return this.isIBKRMarket
     },
     // Filter exchange credentials based on market category
     filteredExchangeCredentials () {
@@ -1780,19 +1768,13 @@ export default {
         return false
       }
     },
-    // Check if selected market supports live trading (Crypto, USStock with IBKR, or Forex with MT5)
+    // Check if selected market supports live trading.
     canUseLiveTrading () {
       const cat = this.selectedMarketCategory || 'Crypto'
-      // Crypto always supports live trading via crypto exchanges
       if (String(cat).toLowerCase() === 'crypto') {
         return true
       }
-      // USStock can use IBKR for live trading
       if (cat === 'USStock') {
-        return true
-      }
-      // Forex can use MT5 for live trading
-      if (cat === 'Forex') {
         return true
       }
       return false
@@ -1837,10 +1819,6 @@ export default {
       if (cat === 'USStock') {
         return this.currentBrokerId === 'ibkr' || exchangeId === 'ibkr' || exchangeId === 'alpaca'
       }
-      // Forex uses MT5
-      if (cat === 'Forex') {
-        return this.currentBrokerId === 'mt5' || exchangeId === 'mt5'
-      }
       return false
     },
     showDemoTradingSwitch () {
@@ -1849,26 +1827,6 @@ export default {
     // Broker options for US stocks (with i18n support)
     brokerOptions () {
       return BROKER_OPTIONS.map(broker => {
-        let label = ''
-        try {
-          const translationKey = `trading-assistant.brokerNames.${broker.labelKey}`
-          const translated = this.$t(translationKey)
-          if (translated !== translationKey) {
-            label = translated
-          }
-        } catch (e) { }
-        if (!label) {
-          label = broker.name || broker.value.toUpperCase()
-        }
-        return {
-          ...broker,
-          displayName: label
-        }
-      })
-    },
-    // Forex broker options (with i18n support)
-    forexBrokerOptions () {
-      return FOREX_BROKER_OPTIONS.map(broker => {
         let label = ''
         try {
           const translationKey = `trading-assistant.brokerNames.${broker.labelKey}`
@@ -2633,12 +2591,7 @@ export default {
       this.applyMarketDefaultsForCategory(this.selectedMarketCategory)
 
       // Auto-set broker ID based on market category
-      if (this.selectedMarketCategory === 'Forex') {
-        this.currentBrokerId = 'mt5'
-        try {
-          this.form && this.form.setFieldsValue && this.form.setFieldsValue({ forex_broker_id: 'mt5' })
-        } catch (e) { }
-      } else if (this.selectedMarketCategory === 'USStock') {
+      if (this.selectedMarketCategory === 'USStock') {
         this.currentBrokerId = 'ibkr'
         try {
           this.form && this.form.setFieldsValue && this.form.setFieldsValue({ broker_id: 'ibkr' })
@@ -2646,8 +2599,7 @@ export default {
       }
 
       // Markets without live trading support: force back to signal mode
-      // Crypto, USStock, Forex support live trading; others do not
-      const supportsLiveTrading = ['Crypto', 'USStock', 'Forex'].includes(this.selectedMarketCategory)
+      const supportsLiveTrading = ['Crypto', 'USStock'].includes(this.selectedMarketCategory)
       if (!supportsLiveTrading) {
         this.executionModeUi = 'signal'
         try {
@@ -2686,12 +2638,7 @@ export default {
       }
 
       // Auto-set broker ID based on market category
-      if (this.selectedMarketCategory === 'Forex') {
-        this.currentBrokerId = 'mt5'
-        try {
-          this.form && this.form.setFieldsValue && this.form.setFieldsValue({ forex_broker_id: 'mt5' })
-        } catch (e) { }
-      } else if (this.selectedMarketCategory === 'USStock') {
+      if (this.selectedMarketCategory === 'USStock') {
         this.currentBrokerId = 'ibkr'
         try {
           this.form && this.form.setFieldsValue && this.form.setFieldsValue({ broker_id: 'ibkr' })
@@ -2699,7 +2646,7 @@ export default {
       }
 
       // Markets without live trading support: force back to signal mode
-      const supportsLiveTrading = ['Crypto', 'USStock', 'Forex'].includes(this.selectedMarketCategory)
+      const supportsLiveTrading = ['Crypto', 'USStock'].includes(this.selectedMarketCategory)
       if (!supportsLiveTrading) {
         this.executionModeUi = 'signal'
         try {
@@ -2786,15 +2733,6 @@ export default {
           ibkr_account: values.ibkr_account || ''
         }
       }
-      if (this.isMT5Market) {
-        return {
-          exchange_id: values.forex_broker_id || this.currentBrokerId || 'mt5',
-          mt5_server: values.mt5_server || '',
-          mt5_login: values.mt5_login || '',
-          mt5_password: values.mt5_password || '',
-          mt5_terminal_path: values.mt5_terminal_path || ''
-        }
-      }
       return {
         credential_id: values.credential_id,
         exchange_id: this.currentExchangeId || undefined
@@ -2813,18 +2751,6 @@ export default {
       const localCred = this.exchangeCredentials.find(c => String(c.id) === String(credentialId))
       if (localCred) {
         const exchangeId = (localCred.exchange_id || '').toLowerCase()
-
-        // Validate MT5 can only be used for Forex
-        if (exchangeId === 'mt5' && this.selectedMarketCategory !== 'Forex') {
-          this.$message.error(this.$t('trading-assistant.validation.mt5OnlyForForex'))
-          // Clear the selection
-          try {
-            this.form && this.form.setFieldsValue && this.form.setFieldsValue({ credential_id: undefined })
-          } catch (e) { }
-          this.currentExchangeId = ''
-          this.connectionTestResult = null
-          return
-        }
 
         // Validate IBKR can only be used for USStock
         if (exchangeId === 'ibkr' && this.selectedMarketCategory !== 'USStock') {
@@ -3259,9 +3185,8 @@ export default {
       if (strategy.exchange_config) {
         const exchangeId = strategy.exchange_config.exchange_id || ''
         const isLive = this.executionModeUi === 'live'
-        const supportsLiveTrading = ['Crypto', 'USStock', 'Forex'].includes(this.selectedMarketCategory)
+        const supportsLiveTrading = ['Crypto', 'USStock'].includes(this.selectedMarketCategory)
         const isBrokerMarket = this.selectedMarketCategory === 'USStock'
-        const isForexMarket = this.selectedMarketCategory === 'Forex'
 
         if (isLive && supportsLiveTrading) {
           if (isBrokerMarket) {
@@ -3273,16 +3198,6 @@ export default {
               ibkr_port: strategy.exchange_config.ibkr_port || 7497,
               ibkr_client_id: strategy.exchange_config.ibkr_client_id || 1,
               ibkr_account: strategy.exchange_config.ibkr_account || ''
-            })
-          } else if (isForexMarket) {
-            // MT5 configuration (Forex)
-            this.currentBrokerId = exchangeId || 'mt5'
-            this.form.setFieldsValue({
-              forex_broker_id: exchangeId || 'mt5',
-              mt5_server: strategy.exchange_config.mt5_server || '',
-              mt5_login: strategy.exchange_config.mt5_login || '',
-              mt5_password: strategy.exchange_config.mt5_password || '',
-              mt5_terminal_path: strategy.exchange_config.mt5_terminal_path || ''
             })
           } else {
             // Crypto exchange configuration — only credential_id is stored in strategy.
@@ -3299,8 +3214,8 @@ export default {
         }
 
         // Update UI state
-        if (isBrokerMarket || isForexMarket) {
-          this.currentBrokerId = exchangeId || (isForexMarket ? 'mt5' : 'ibkr')
+        if (isBrokerMarket) {
+          this.currentBrokerId = exchangeId || 'ibkr'
         } else {
           this.currentExchangeId = exchangeId
         }
@@ -4096,10 +4011,6 @@ export default {
     },
     handleBrokerSelectChange (value) {
       this.currentBrokerId = value || 'ibkr'
-      this.connectionTestResult = null
-    },
-    handleForexBrokerSelectChange (value) {
-      this.currentBrokerId = value || 'mt5'
       this.connectionTestResult = null
     },
     handleExchangeSelectChange (value) {

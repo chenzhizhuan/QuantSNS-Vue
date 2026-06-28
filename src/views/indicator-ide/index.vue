@@ -25,39 +25,53 @@
             </div>
             <div class="panel-title__trailing">
               <div class="panel-title-actions" @click.stop>
-                <a-tooltip :title="$t('dashboard.indicator.create')">
-                  <a-button size="small" :loading="creatingIndicator" @click="handleCreateIndicator"><a-icon type="plus" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.saveBlockedPurchased') : $t('indicatorIde.save')">
-                  <a-button size="small" :disabled="!selectedIndicatorId || !codeDirty || selectedIndicatorIsPurchased" @click="saveIndicator"><a-icon type="save" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.deleteBlockedPurchased') : $t('dashboard.indicator.action.delete')">
+                <div class="panel-title-icon-actions">
+                  <a-tooltip :title="$t('dashboard.indicator.create')">
+                    <a-button size="small" :loading="creatingIndicator" @click="handleCreateIndicator"><a-icon type="plus" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.deleteBlockedPurchased') : $t('dashboard.indicator.action.delete')">
+                    <a-button
+                      size="small"
+                      :disabled="!selectedIndicatorId || selectedIndicatorIsPurchased"
+                      :loading="deletingIndicator"
+                      @click="handleDeleteIndicator"
+                    ><a-icon type="delete" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.publishBlockedPurchased') : $t('dashboard.indicator.action.publish')">
+                    <a-button size="small" :disabled="!selectedIndicatorId || selectedIndicatorIsPurchased" @click="handlePublishIndicator"><a-icon type="cloud-upload" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="$t('dashboard.indicator.action.createStrategy')">
+                    <a-button size="small" :disabled="!selectedIndicatorId" @click="handleCreateStrategyFromIndicator"><a-icon type="deployment-unit" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="$t('indicatorIde.saveAsNew')">
+                    <a-button size="small" :disabled="!userId || !currentCode" @click="openSaveAsIndicatorModal"><a-icon type="copy" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="editorFullscreen ? $t('indicatorIde.exitFullscreen') : $t('indicatorIde.fullscreenEditor')">
+                    <a-button size="small" @click="toggleEditorFullscreen"><a-icon :type="editorFullscreen ? 'fullscreen-exit' : 'fullscreen'" /></a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="chartIndicatorRunning ? $t('indicatorIde.stopIndicatorOnChart') : $t('indicatorIde.runIndicatorOnChart')">
+                    <a-button
+                      size="small"
+                      :disabled="chartIndicatorToggleDisabled"
+                      @click="toggleChartIndicatorRun"
+                    >
+                      <a-icon :type="chartIndicatorRunning ? 'pause-circle' : 'play-circle'" />
+                    </a-button>
+                  </a-tooltip>
+                  <a-tooltip :title="$t('indicatorIde.codeVersionHistory')">
+                    <a-button size="small" :disabled="!selectedIndicatorId" @click="openCodeVersionDrawer"><a-icon type="history" /></a-button>
+                  </a-tooltip>
+                </div>
+                <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.saveBlockedPurchased') : $t('indicatorIde.saveShortcutHint')">
                   <a-button
+                    class="ide-save-button"
+                    type="primary"
                     size="small"
-                    :disabled="!selectedIndicatorId || selectedIndicatorIsPurchased"
-                    :loading="deletingIndicator"
-                    @click="handleDeleteIndicator"
-                  ><a-icon type="delete" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="selectedIndicatorIsPurchased ? $t('indicatorIde.publishBlockedPurchased') : $t('dashboard.indicator.action.publish')">
-                  <a-button size="small" :disabled="!selectedIndicatorId || selectedIndicatorIsPurchased" @click="handlePublishIndicator"><a-icon type="cloud-upload" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="$t('dashboard.indicator.action.createStrategy')">
-                  <a-button size="small" :disabled="!selectedIndicatorId" @click="handleCreateStrategyFromIndicator"><a-icon type="deployment-unit" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="$t('indicatorIde.saveAsNew')">
-                  <a-button size="small" :disabled="!userId || !currentCode" @click="openSaveAsIndicatorModal"><a-icon type="copy" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="editorFullscreen ? $t('indicatorIde.exitFullscreen') : $t('indicatorIde.fullscreenEditor')">
-                  <a-button size="small" @click="toggleEditorFullscreen"><a-icon :type="editorFullscreen ? 'fullscreen-exit' : 'fullscreen'" /></a-button>
-                </a-tooltip>
-                <a-tooltip :title="chartIndicatorRunning ? $t('indicatorIde.stopIndicatorOnChart') : $t('indicatorIde.runIndicatorOnChart')">
-                  <a-button
-                    size="small"
-                    :disabled="chartIndicatorToggleDisabled"
-                    @click="toggleChartIndicatorRun"
+                    :loading="savingIndicator"
+                    :disabled="!selectedIndicatorId || !codeDirty || selectedIndicatorIsPurchased"
+                    @click="saveIndicator"
                   >
-                    <a-icon :type="chartIndicatorRunning ? 'pause-circle' : 'play-circle'" />
+                    {{ $t('indicatorIde.save') }}
                   </a-button>
                 </a-tooltip>
               </div>
@@ -68,7 +82,7 @@
             <div class="ide-guide-bar">
               <a-icon type="book" />
               <span>{{ $t('indicatorIde.devGuideTooltip') }}</span>
-              <a href="https://github.com/brokermr810/QuantDinger/blob/main/docs/STRATEGY_DEV_GUIDE.md" target="_blank" rel="noopener noreferrer" class="ide-guide-link" @click.stop>
+              <a href="https://www.quantdinger.com/docs-zh.html#strategy-overview" target="_blank" rel="noopener noreferrer" class="ide-guide-link" @click.stop>
                 {{ $t('indicatorIde.devGuide') }} <a-icon type="arrow-right" />
               </a>
             </div>
@@ -786,11 +800,12 @@
                                 <span class="trades-count">({{ pairedTrades.length }})</span>
                               </div>
                               <a-table
+                                class="trades-table"
                                 :columns="tradeColumns"
                                 :dataSource="pairedTrades"
                                 :pagination="{ pageSize: 8, size: 'small' }"
                                 size="small"
-                                :scroll="{ x: 820 }"
+                                :scroll="{ x: 980 }"
                                 rowKey="id"
                               >
                                 <template slot="type" slot-scope="text">
@@ -1454,6 +1469,46 @@
       @cancel="showHistoryDrawer = false"
       @view="applyBacktestRunToIde"
     />
+    <a-drawer
+      :title="$t('indicatorIde.codeVersionHistory')"
+      :visible="showCodeVersionDrawer"
+      :width="560"
+      :get-container="ideModalGetContainer"
+      :wrap-class-name="isDarkTheme ? 'ide-drawer-wrap ide-drawer-wrap--dark' : 'ide-drawer-wrap'"
+      @close="showCodeVersionDrawer = false"
+    >
+      <div class="code-version-toolbar">
+        <span>{{ selectedIndicatorObj ? selectedIndicatorObj.name : '' }}</span>
+        <a-button size="small" icon="reload" :loading="codeVersionLoading" @click="loadCodeVersions">
+          {{ $t('dashboard.indicator.backtest.historyRefresh') }}
+        </a-button>
+      </div>
+      <a-spin :spinning="codeVersionLoading">
+        <a-empty v-if="!codeVersions.length" :description="$t('indicatorIde.codeVersionEmpty')" />
+        <div v-else class="code-version-list">
+          <div v-for="item in codeVersions" :key="item.id" class="code-version-item">
+            <div class="code-version-item__main">
+              <strong>{{ $t('indicatorIde.codeVersionNo', { version: item.version_no }) }}</strong>
+              <span>{{ formatCodeVersionTime(item.created_at) }}</span>
+              <small>{{ item.name || selectedIndicatorObj && selectedIndicatorObj.name || '' }}</small>
+            </div>
+            <div class="code-version-item__actions">
+              <a-button size="small" @click="previewCodeVersion(item)">{{ $t('indicatorIde.codeVersionPreview') }}</a-button>
+              <a-button size="small" type="primary" :loading="restoringCodeVersionId === item.id" @click="confirmRestoreCodeVersion(item)">
+                {{ $t('indicatorIde.codeVersionRestore') }}
+              </a-button>
+            </div>
+          </div>
+        </div>
+      </a-spin>
+      <div v-if="codeVersionPreview" class="code-version-preview">
+        <div class="code-version-preview__head">
+          <strong>{{ $t('indicatorIde.codeVersionPreviewTitle', { version: codeVersionPreview.version_no }) }}</strong>
+          <a-button size="small" icon="close" @click="codeVersionPreview = null">{{ $t('indicatorIde.close') }}</a-button>
+        </div>
+        <pre>{{ codeVersionPreview.code }}</pre>
+      </div>
+    </a-drawer>
     <a-modal
       :title="publishIndicator && publishIndicator.publish_to_community ? $t('dashboard.indicator.publish.editTitle') : $t('dashboard.indicator.publish.title')"
       :visible="showPublishModal"
@@ -1697,6 +1752,7 @@ export default {
       qtPrice: 0,
 
       creatingIndicator: false,
+      savingIndicator: false,
       deletingIndicator: false,
       showPublishModal: false,
       showSaveAsModal: false,
@@ -1722,6 +1778,11 @@ export default {
 
       showHistoryDrawer: false,
       historyIndicatorId: null,
+      showCodeVersionDrawer: false,
+      codeVersionLoading: false,
+      codeVersions: [],
+      codeVersionPreview: null,
+      restoringCodeVersionId: null,
 
       ideAddMarketKeys: [],
 
@@ -2350,7 +2411,6 @@ export default {
       const raw = (this.result && this.result.trades) || []
       const pairs = []
       let openTrade = null
-      let idx = 1
       for (let i = 0; i < raw.length; i++) {
         const t = raw[i]
         const ty = (t.type || '').toLowerCase()
@@ -2358,13 +2418,16 @@ export default {
           openTrade = t
         } else if (openTrade) {
           const direction = openTrade.type.includes('long') || openTrade.type === 'buy' ? 'long' : 'short'
+          const entryTs = this.tradeTimeValue(openTrade.time)
+          const exitTs = this.tradeTimeValue(t.time)
           pairs.push({
-            id: idx++,
             type: direction,
             closeType: t.type || '',
             closeReason: t.reason || t.close_reason || '',
             entryDate: formatBacktestTime(openTrade.time, { fallback: '' }),
             exitDate: formatBacktestTime(t.time, { fallback: '' }),
+            entryTs,
+            exitTs,
             entryPrice: openTrade.price,
             exitPrice: t.price,
             profit: t.profit || 0,
@@ -2374,17 +2437,19 @@ export default {
         }
       }
       return pairs
+        .sort((a, b) => (b.exitTs || b.entryTs || 0) - (a.exitTs || a.entryTs || 0))
+        .map((item, index) => ({ ...item, id: pairs.length - index }))
     },
     tradeColumns () {
       return [
         { title: '#', dataIndex: 'id', width: 50 },
         { title: this.$t('indicatorIde.type'), dataIndex: 'type', scopedSlots: { customRender: 'type' }, width: 80 },
         { title: this.$t('indicatorIde.exitTag'), dataIndex: 'closeType', scopedSlots: { customRender: 'exitTag' }, width: 108 },
-        { title: this.$t('indicatorIde.entry'), dataIndex: 'entryDate', width: 140 },
-        { title: this.$t('indicatorIde.exit'), dataIndex: 'exitDate', width: 140 },
+        { title: this.$t('indicatorIde.profit'), dataIndex: 'profit', scopedSlots: { customRender: 'profit' }, width: 120 },
         { title: this.$t('indicatorIde.entryPrice'), dataIndex: 'entryPrice', scopedSlots: { customRender: 'price' }, width: 100 },
         { title: this.$t('indicatorIde.exitPrice'), dataIndex: 'exitPrice', scopedSlots: { customRender: 'price' }, width: 100 },
-        { title: this.$t('indicatorIde.profit'), dataIndex: 'profit', scopedSlots: { customRender: 'profit' }, width: 120 },
+        { title: this.$t('indicatorIde.entry'), dataIndex: 'entryDate', width: 140 },
+        { title: this.$t('indicatorIde.exit'), dataIndex: 'exitDate', width: 140 },
         { title: this.$t('indicatorIde.balance'), dataIndex: 'balance', scopedSlots: { customRender: 'money' }, width: 130 }
       ]
     },
@@ -2408,8 +2473,10 @@ export default {
   },
   mounted () {
     this._fullscreenListener = () => this.onGlobalFullscreenChange()
+    this._saveShortcutListener = (event) => this.handleGlobalSaveShortcut(event)
     document.addEventListener('fullscreenchange', this._fullscreenListener)
     document.addEventListener('webkitfullscreenchange', this._fullscreenListener)
+    window.addEventListener('keydown', this._saveShortcutListener)
     this.$nextTick(() => {
       this.initCodeMirror()
       this.ensureChartReady()
@@ -2443,6 +2510,10 @@ export default {
       document.removeEventListener('fullscreenchange', this._fullscreenListener)
       document.removeEventListener('webkitfullscreenchange', this._fullscreenListener)
       this._fullscreenListener = null
+    }
+    if (this._saveShortcutListener) {
+      window.removeEventListener('keydown', this._saveShortcutListener)
+      this._saveShortcutListener = null
     }
     try {
       message.destroy()
@@ -2797,7 +2868,11 @@ export default {
         styleActiveLine: true,
         tabSize: 4,
         indentUnit: 4,
-        indentWithTabs: false
+        indentWithTabs: false,
+        extraKeys: {
+          'Ctrl-S': () => this.saveIndicatorFromShortcut(),
+          'Cmd-S': () => this.saveIndicatorFromShortcut()
+        }
       })
       this.cmInstance.setValue(this.currentCode)
       this.cmInstance.on('change', (cm) => {
@@ -3154,21 +3229,50 @@ export default {
         this.renderBacktestSignals()
       }
     },
+    handleGlobalSaveShortcut (event) {
+      if (!event || (!event.ctrlKey && !event.metaKey) || String(event.key || '').toLowerCase() !== 's') return
+      event.preventDefault()
+      this.saveIndicatorFromShortcut()
+    },
+    saveIndicatorFromShortcut () {
+      if (!this.selectedIndicatorId || !this.userId) return
+      if (this.selectedIndicatorIsPurchased) {
+        this.$message.warning(this.$t('indicatorIde.saveBlockedPurchased'))
+        return
+      }
+      if (!this.codeDirty) {
+        this.$message.info(this.$t('indicatorIde.noChangesToSave'))
+        return
+      }
+      this.saveIndicator()
+    },
 
     async saveIndicator () {
       if (!this.selectedIndicatorId || !this.userId) return
+      if (this.savingIndicator) return
+      const indicator = this.selectedIndicatorObj || {}
+      const code = this.cmInstance ? this.cmInstance.getValue() : this.currentCode
+      this.savingIndicator = true
       try {
         const res = await request({
           url: '/api/indicator/saveIndicator',
           method: 'post',
-          data: { id: this.selectedIndicatorId, code: this.currentCode, userid: this.userId }
+          data: {
+            id: this.selectedIndicatorId,
+            code,
+            name: indicator.name || '',
+            description: indicator.description || '',
+            userid: this.userId
+          }
         })
         if (res && res.code === 1) {
+          this.currentCode = code
           this.codeDirty = false
           this.$message.success(this.$t('indicatorIde.saved'))
           const ind = this.indicators.find(i => i.id === this.selectedIndicatorId)
-          if (ind) ind.code = this.currentCode
-          this.syncSelectedIndicatorToChart(this.currentCode)
+          if (ind) ind.code = code
+          this.syncSelectedIndicatorToChart(code)
+          if (this.showCodeVersionDrawer) this.loadCodeVersions()
         } else {
           const m = (res && res.msg) || ''
           if (m === 'indicator_purchased_readonly') {
@@ -3185,7 +3289,103 @@ export default {
         } else {
           this.$message.error((e && e.message) || this.$t('indicatorIde.saveFailed'))
         }
+      } finally {
+        this.savingIndicator = false
       }
+    },
+    openCodeVersionDrawer () {
+      if (!this.selectedIndicatorId) return
+      this.showCodeVersionDrawer = true
+      this.codeVersionPreview = null
+      this.loadCodeVersions()
+    },
+    async loadCodeVersions () {
+      if (!this.selectedIndicatorId) return
+      this.codeVersionLoading = true
+      try {
+        const res = await request({
+          url: '/api/indicator/versions',
+          method: 'get',
+          params: { indicatorId: this.selectedIndicatorId }
+        })
+        if (res && res.code === 1) {
+          this.codeVersions = Array.isArray(res.data) ? res.data : []
+        } else {
+          this.$message.error((res && res.msg) || this.$t('indicatorIde.codeVersionLoadFailed'))
+        }
+      } catch (e) {
+        this.$message.error((e && e.message) || this.$t('indicatorIde.codeVersionLoadFailed'))
+      } finally {
+        this.codeVersionLoading = false
+      }
+    },
+    async previewCodeVersion (item) {
+      if (!item || !item.id) return
+      try {
+        const res = await request({
+          url: `/api/indicator/versions/${item.id}`,
+          method: 'get'
+        })
+        if (res && res.code === 1) {
+          this.codeVersionPreview = res.data || null
+        } else {
+          this.$message.error((res && res.msg) || this.$t('indicatorIde.codeVersionLoadFailed'))
+        }
+      } catch (e) {
+        this.$message.error((e && e.message) || this.$t('indicatorIde.codeVersionLoadFailed'))
+      }
+    },
+    confirmRestoreCodeVersion (item) {
+      if (!item || !item.id) return
+      Modal.confirm({
+        title: this.$t('indicatorIde.codeVersionRestoreTitle'),
+        content: this.$t('indicatorIde.codeVersionRestoreContent', { version: item.version_no }),
+        okText: this.$t('indicatorIde.codeVersionRestore'),
+        cancelText: this.$t('dashboard.indicator.editor.cancel'),
+        getContainer: () => this.resolveIdeFullscreenMountNode() || document.body,
+        onOk: () => this.restoreCodeVersion(item)
+      })
+    },
+    async restoreCodeVersion (item) {
+      if (!item || !item.id) return
+      this.restoringCodeVersionId = item.id
+      try {
+        const res = await request({
+          url: '/api/indicator/versions/restore',
+          method: 'post',
+          data: { versionId: item.id }
+        })
+        if (res && res.code === 1 && res.data) {
+          const nextCode = res.data.code || ''
+          this.currentCode = nextCode
+          this.codeDirty = false
+          if (this.cmInstance) {
+            this.cmInstance.setValue(nextCode)
+            this.cmInstance.refresh()
+          }
+          const ind = this.indicators.find(i => Number(i.id) === Number(this.selectedIndicatorId))
+          if (ind) {
+            ind.code = nextCode
+            ind.name = res.data.name || ind.name
+            ind.description = res.data.description || ind.description
+          }
+          this.syncSelectedIndicatorToChart(nextCode)
+          this.syncTradeUiFromStrategyCode(nextCode, { silent: true })
+          this.$message.success(this.$t('indicatorIde.codeVersionRestored'))
+          await this.loadCodeVersions()
+        } else {
+          this.$message.error((res && res.msg) || this.$t('indicatorIde.codeVersionRestoreFailed'))
+        }
+      } catch (e) {
+        this.$message.error((e && e.message) || this.$t('indicatorIde.codeVersionRestoreFailed'))
+      } finally {
+        this.restoringCodeVersionId = null
+      }
+    },
+    formatCodeVersionTime (value) {
+      if (!value) return '--'
+      const m = moment(value)
+      return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : String(value)
     },
 
     handleDeleteIndicator () {
@@ -6049,6 +6249,14 @@ export default {
       if (v == null || isNaN(v)) return '0.00'
       return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     },
+    tradeTimeValue (value) {
+      if (value == null || value === '') return 0
+      if (value instanceof Date) return value.getTime()
+      if (typeof value === 'number') return value
+      const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T')
+      const parsed = new Date(normalized).getTime()
+      return Number.isFinite(parsed) ? parsed : 0
+    },
     fmtElapsed (s) {
       return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
     },
@@ -6491,14 +6699,15 @@ export default {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1;
+  flex: 0 0 auto;
   overflow: hidden;
 }
 .panel-title__trailing {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 .panel-title-chevron {
   font-size: 11px;
@@ -6508,10 +6717,20 @@ export default {
 .panel-title-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.panel-title-icon-actions {
+  display: flex;
+  align-items: center;
   gap: 4px;
-  flex-shrink: 0;
+  min-width: 0;
+  flex-wrap: nowrap;
   ::v-deep .ant-btn-sm {
     width: 26px;
+    min-width: 26px;
     height: 26px;
     padding: 0;
     display: inline-flex;
@@ -6523,6 +6742,95 @@ export default {
     &:hover { border-color: @primary-color; color: @primary-color; }
     &[disabled] { opacity: 0.35; }
   }
+}
+.panel-title-actions ::v-deep .ide-save-button {
+  flex: 0 0 auto;
+  min-width: 54px;
+  height: 26px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.code-version-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #64748b;
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.code-version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.code-version-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+}
+.code-version-item__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  strong { color: #0f172a; }
+  span, small {
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.code-version-item__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.code-version-preview {
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0f172a;
+}
+.code-version-preview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  strong { color: #0f172a; }
+}
+.code-version-preview pre {
+  max-height: 360px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.55;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  white-space: pre;
 }
 .ide-guide-bar {
   display: flex;
@@ -7869,6 +8177,16 @@ body.realdark .backtest-panel-toolbar {
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  overflow: hidden;
+}
+.trades-table ::v-deep .ant-table-content,
+.trades-table ::v-deep .ant-table-scroll,
+.trades-table ::v-deep .ant-table-body {
+  overflow-x: auto !important;
+}
+.trades-table ::v-deep .ant-table-thead > tr > th,
+.trades-table ::v-deep .ant-table-tbody > tr > td {
+  white-space: nowrap;
 }
 .diagnostics-section {
   padding: 12px;
@@ -9345,6 +9663,25 @@ body.realdark .backtest-panel-toolbar {
   .panel-title-chevron {
     color: rgba(255, 255, 255, 0.38);
   }
+  .code-version-toolbar {
+    color: rgba(255, 255, 255, 0.58);
+  }
+  .code-version-item {
+    background: #1f1f1f;
+    border-color: #303030;
+  }
+  .code-version-item__main {
+    strong { color: rgba(255, 255, 255, 0.88); }
+    span, small { color: rgba(255, 255, 255, 0.52); }
+  }
+  .code-version-preview {
+    border-color: #303030;
+  }
+  .code-version-preview__head {
+    background: #1f1f1f;
+    border-color: #303030;
+    strong { color: rgba(255, 255, 255, 0.88); }
+  }
   .chart-panel-icon-btn {
     background: #262626;
     border-color: #434343;
@@ -10031,6 +10368,21 @@ body.dark .indicator-ide .result-tabs .ant-tabs-tab {
 body.dark .indicator-ide .result-tabs .ant-tabs-tab-active {
   color: #58a6ff !important;
   background: #1a1a1a !important;
+}
+body.dark .ide-drawer-wrap .ant-drawer-content,
+body.dark .ide-drawer-wrap--dark .ant-drawer-content {
+  background: #141414;
+}
+body.dark .ide-drawer-wrap .ant-drawer-header,
+body.dark .ide-drawer-wrap--dark .ant-drawer-header {
+  background: #1f1f1f;
+  border-bottom-color: #303030;
+}
+body.dark .ide-drawer-wrap .ant-drawer-title,
+body.dark .ide-drawer-wrap--dark .ant-drawer-title,
+body.dark .ide-drawer-wrap .ant-drawer-close,
+body.dark .ide-drawer-wrap--dark .ant-drawer-close {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 /* ===== Watchlist dropdown ===== */

@@ -707,14 +707,32 @@ export default {
           this.loadDetail()
           this.$emit('purchased')
         } else {
-          const msgKey = `community.${res.msg}`
-          this.$message.error(this.$te(msgKey) ? this.$t(msgKey) : res.msg)
+          this.$message.error(this.formatPurchaseError(res))
         }
       } catch (e) {
-        this.$message.error(this.$t('community.purchaseFailed'))
+        this.$message.error(this.formatPurchaseError(e))
       } finally {
         this.purchasing = false
       }
+    },
+
+    formatPurchaseError (source) {
+      const envelope = (source && source.response && source.response.data) || source || {}
+      const code = envelope.msg || envelope.message || envelope.error || ''
+      const details = envelope.data || {}
+      if (code === 'insufficient_credits') {
+        const required = Number(details.required || 0)
+        const current = Number(details.current || 0)
+        const shortage = Math.max(required - current, 0)
+        return this.$t('community.insufficientCreditsDetail', {
+          required: this.formatPrice(required),
+          current: this.formatPrice(current),
+          shortage: this.formatPrice(shortage)
+        })
+      }
+      const msgKey = code ? `community.${code}` : ''
+      if (msgKey && this.$te(msgKey)) return this.$t(msgKey)
+      return (source && source.backendMessage) || code || this.$t('community.purchaseFailed')
     },
 
     goToUse () {
