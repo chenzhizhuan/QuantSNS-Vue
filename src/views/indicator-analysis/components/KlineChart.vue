@@ -1779,6 +1779,26 @@ registerOverlay({
       })
     }
 
+    const appendRealtimeBarsToChart = (bars) => {
+      if (!chartRef.value || !Array.isArray(bars) || bars.length === 0) return
+      if (typeof chartRef.value.updateData === 'function') {
+        bars.forEach(bar => {
+          chartRef.value.updateData({
+            timestamp: bar.timestamp,
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: bar.volume != null ? bar.volume : 0
+          })
+        })
+        return
+      }
+      try {
+        chartRef.value.applyNewData(klineData.value)
+      } catch (_) {}
+    }
+
     const updatePricePanel = (data, options = {}) => {
       const force = !!(options && options.force)
       if (!data || data.length === 0) return
@@ -2233,13 +2253,8 @@ registerOverlay({
                 const internalData = convertToInternalFormat(klineData.value)
                 updatePricePanel(internalData, { force: true })
 
-                if (chartRef.value && typeof chartRef.value.applyMoreData === 'function') {
-                  chartRef.value.applyMoreData(uniqueNewData)
-                  maybeUpdateIndicators(true)
-                } else if (chartRef.value) {
-                  chartRef.value.applyNewData(klineData.value)
-                  maybeUpdateIndicators(true)
-                }
+                appendRealtimeBarsToChart(uniqueNewData)
+                maybeUpdateIndicators(true)
               }
             }
           }
@@ -2338,11 +2353,7 @@ registerOverlay({
 
         updatePricePanelFromLastBars(arr, true)
 
-        if (chartRef.value && typeof chartRef.value.applyMoreData === 'function') {
-          chartRef.value.applyMoreData([bar])
-        } else if (chartRef.value) {
-          chartRef.value.applyNewData(klineData.value)
-        }
+        appendRealtimeBarsToChart([bar])
         maybeUpdateIndicators(true)
       }
     }
