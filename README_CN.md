@@ -83,7 +83,7 @@
 | 官方前端镜像 | `ghcr.io/brokermr810/quantdinger-frontend` |
 | 常用标签 | `latest`、semver（`4.0.4`）、`{major}.{minor}`（`4.0`） |
 
-可用标签见 [QuantDinger Releases](https://github.com/brokermr810/QuantDinger/releases) 与 [QuantDinger-Vue Releases](https://github.com/brokermr810/QuantDinger-Vue/releases)。
+可用标签见 [QuantDinger Releases](https://github.com/brokermr810/QuantDinger/releases) 与 [QuantSNS-Vue Releases](https://github.com/brokermr810/QuantSNS-Vue/releases)。
 
 ### 方式一 — 主仓库整栈部署（推荐）
 
@@ -176,7 +176,7 @@ docker inspect quantdinger-frontend --format '{{.Config.Image}}'
 |------|------|
 | 本地 nginx 镜像 | `docker build -t quantdinger-frontend:local .` 后 `docker run …`（见下） |
 | 纯静态 `dist/` | `pnpm run build`，或使用 Release 附带的 **`dist.tar.gz`** |
-| 主仓库内联调 | 将本仓克隆到 `./QuantDinger-Vue/` 后 `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` |
+| 主仓库内联调 | 将本仓克隆到 `./QuantSNS-Vue/` 后 `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` |
 
 本地 Docker 构建（与 CI 相同 Dockerfile）：
 
@@ -230,14 +230,14 @@ docker compose up -d --no-deps frontend
 建议使用 **Git 克隆**，这样生产构建可以准确写入 release tag 与 commit 信息。无 `.git` 的源码 ZIP 仍可构建，但会回退到 package/env 版本信息：
 
 ```bash
-git clone https://github.com/brokermr810/QuantDinger-Vue.git
-cd QuantDinger-Vue
+git clone https://github.com/brokermr810/QuantSNS-Vue.git
+cd QuantSNS-Vue
 corepack enable
 pnpm install
 pnpm run serve
 ```
 
-若在主仓库目录内开发（例如 `QuantDinger-Vue-src/`），在本目录下执行相同命令即可。
+若在主仓库目录内开发（例如 `QuantSNS-Vue-src/`），在本目录下执行相同命令即可。
 
 ### 先启动后端
 
@@ -278,7 +278,7 @@ VITE_DEV_PROXY_TARGET=http://127.0.0.1:5000 pnpm run serve
 pnpm run build
 ```
 
-构建产物输出到 `dist/`。[QuantDinger-Vue Releases](https://github.com/brokermr810/QuantDinger-Vue/releases) 也可能附带 **`dist.tar.gz`**，便于无 Docker 的静态部署。
+构建产物输出到 `dist/`。[QuantSNS-Vue Releases](https://github.com/brokermr810/QuantSNS-Vue/releases) 也可能附带 **`dist.tar.gz`**，便于无 Docker 的静态部署。
 
 ---
 
@@ -315,7 +315,7 @@ pnpm run build
 ## 项目结构
 
 ```text
-QuantDinger-Vue/
+QuantSNS-Vue/
 ├── public/                    # 静态资源与 HTML 壳
 ├── deploy/                    # Docker / 生产环境 nginx 模板
 ├── src/

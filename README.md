@@ -84,7 +84,7 @@ If you are looking for one-click deployment, Docker Compose, backend APIs, or th
 | Official frontend | `ghcr.io/brokermr810/quantdinger-frontend` |
 | Tags | `latest`, semver (`4.0.4`), `{major}.{minor}` (`4.0`) |
 
-See available tags on [QuantDinger Releases](https://github.com/brokermr810/QuantDinger/releases) and [QuantDinger-Vue Releases](https://github.com/brokermr810/QuantDinger-Vue/releases).
+See available tags on [QuantDinger Releases](https://github.com/brokermr810/QuantDinger/releases) and [QuantSNS-Vue Releases](https://github.com/brokermr810/QuantSNS-Vue/releases).
 
 ### Option 1 — Full stack via main repo (recommended)
 
@@ -177,7 +177,7 @@ docker inspect quantdinger-frontend --format '{{.Config.Image}}'
 |------|---------|
 | Local nginx image | `docker build -t quantdinger-frontend:local .` then `docker run …` (see below) |
 | Static `dist/` only | `pnpm run build` → serve `dist/` or use release **`dist.tar.gz`** |
-| Dev inside main repo tree | `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` with this repo cloned to `./QuantDinger-Vue/` |
+| Dev inside main repo tree | `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` with this repo cloned to `./QuantSNS-Vue/` |
 
 Local Docker build (same Dockerfile as CI):
 
@@ -223,14 +223,14 @@ Use **`pnpm install`** with the committed **`pnpm-lock.yaml`**. Do not commit `p
 Clone with Git when possible so release and commit metadata can be stamped accurately. A plain source ZIP can still build, but it falls back to package/env version metadata:
 
 ```bash
-git clone https://github.com/brokermr810/QuantDinger-Vue.git
-cd QuantDinger-Vue
+git clone https://github.com/brokermr810/QuantSNS-Vue.git
+cd QuantSNS-Vue
 corepack enable
 pnpm install
 pnpm run serve
 ```
 
-If you work from a copy inside the main QuantDinger tree (e.g. `QuantDinger-Vue-src/`), run the same commands in this directory instead.
+If you work from a copy inside the main QuantDinger tree (e.g. `QuantSNS-Vue-src/`), run the same commands in this directory instead.
 
 ### Start the backend first
 
@@ -271,7 +271,7 @@ If DevTools shows `http://localhost:8000/api/...`, that is expected in developme
 pnpm run build
 ```
 
-Output goes to `dist/`. Release assets may also ship as **`dist.tar.gz`** on [QuantDinger-Vue Releases](https://github.com/brokermr810/QuantDinger-Vue/releases) for static hosting without Docker.
+Output goes to `dist/`. Release assets may also ship as **`dist.tar.gz`** on [QuantSNS-Vue Releases](https://github.com/brokermr810/QuantSNS-Vue/releases) for static hosting without Docker.
 
 ---
 
@@ -308,7 +308,7 @@ Output goes to `dist/`. Release assets may also ship as **`dist.tar.gz`** on [Qu
 ## Project Structure
 
 ```text
-QuantDinger-Vue/
+QuantSNS-Vue/
 ├── public/                    # Static assets and HTML shell
 ├── deploy/                    # nginx templates for Docker / production proxy
 ├── src/
