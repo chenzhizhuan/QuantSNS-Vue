@@ -524,8 +524,8 @@ export default {
     }
 
     ::v-deep .ant-alert {
-      background: rgba(24, 144, 255, 0.08);
-      border-color: rgba(24, 144, 255, 0.22);
+      background: color-mix(in srgb, var(--primary-color, #1890ff) 8%, transparent);
+      border-color: color-mix(in srgb, var(--primary-color, #1890ff) 22%, transparent);
       color: rgba(255, 255, 255, 0.78);
 
       .ant-alert-message,
@@ -548,7 +548,7 @@ export default {
 
     ::v-deep .ant-tabs-tab-active {
       color: var(--primary-color-hover, #40a9ff);
-      background: rgba(24, 144, 255, 0.12);
+      background: color-mix(in srgb, var(--primary-color, #1890ff) 12%, transparent);
     }
 
     ::v-deep .ant-btn:not(.ant-btn-primary):not(.ant-btn-link) {
@@ -612,7 +612,7 @@ export default {
 
     ::v-deep .ant-pagination-item-active {
       border-color: var(--primary-color, #1890ff);
-      background: rgba(24, 144, 255, 0.16);
+      background: color-mix(in srgb, var(--primary-color, #1890ff) 16%, transparent);
 
       a {
         color: #fff;
