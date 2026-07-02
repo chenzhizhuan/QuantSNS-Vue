@@ -621,3 +621,100 @@ export default {
   }
 }
 </style>
+
+<style lang="less">
+.profile-agent-tokens-modal.theme-dark {
+  .ant-modal-content,
+  .ant-modal-header,
+  .ant-modal-body,
+  .ant-modal-footer {
+    background: #1c1c1c;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .ant-modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .ant-modal-footer {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .ant-modal-title,
+  .ant-form-item-label > label,
+  .ant-checkbox-wrapper {
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  .ant-modal-close,
+  .ant-modal-close-x {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .ant-modal-close:hover,
+  .ant-modal-close:focus {
+    color: rgba(255, 255, 255, 0.86);
+  }
+
+  .ant-input,
+  .ant-input-number,
+  .ant-input-number-input,
+  .ant-select-selection {
+    background: #141414 !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: rgba(255, 255, 255, 0.86) !important;
+  }
+
+  .ant-input::placeholder,
+  .ant-input-number-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .ant-input-number-handler-wrap {
+    background: #1f1f1f;
+    border-left-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .ant-input-number-handler {
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .hint,
+  .ant-form-extra {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .hint.danger {
+    color: #ff7875;
+  }
+
+  .ant-checkbox-inner {
+    background: #141414;
+    border-color: rgba(255, 255, 255, 0.32);
+  }
+
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background: var(--primary-color, #1890ff);
+    border-color: var(--primary-color, #1890ff);
+  }
+
+  .ant-switch {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .ant-switch-checked {
+    background: var(--primary-color, #1890ff);
+  }
+
+  .ant-alert {
+    background: rgba(255, 77, 79, 0.08);
+    border-color: rgba(255, 77, 79, 0.26);
+  }
+
+  .ant-alert-message,
+  .ant-alert-description {
+    color: rgba(255, 255, 255, 0.86);
+  }
+}
+</style>

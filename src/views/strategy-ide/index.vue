@@ -560,7 +560,7 @@ export default {
         timeframeBoundary: '固定 1m 触发 on_bar，实盘每 10s 检查一次最新价格。',
         strategyBoundaryNote: '边界：这里仅选择标的、现货/合约、方向、投入金额和杠杆；分仓、间距、马丁倍数、止盈止损等高级设置由脚本代码决定。',
         runNote: '运行回测时会先同步当前脚本源码；实盘账户、通知和账户级风控仍在策略实盘页绑定。',
-        codeRequired: '请先编写脚本策略代码',
+        codeRequired: '请先编写交易脚本代码',
         symbolRequired: '请选择回测标的',
         saveSuccess: '脚本源码已保存',
         saveFailed: '保存脚本源码失败',
@@ -645,7 +645,7 @@ export default {
         timeframeBoundary: 'Fixed 1m on_bar trigger; live mode checks the latest price every 10s.',
         strategyBoundaryNote: 'Boundary: this panel only chooses symbol, spot/swap, direction, investment amount, and leverage. Layers, spacing, martingale sizing, exits, and other advanced settings belong in script code.',
         runNote: 'Backtest syncs the current script source first. Live account, notifications, and account-level risk remain bound in Strategy Live.',
-        codeRequired: 'Write script strategy code first',
+        codeRequired: 'Write trading script code first',
         symbolRequired: 'Select a backtest symbol',
         saveSuccess: 'Script source saved',
         saveFailed: 'Failed to save script source',
@@ -673,6 +673,7 @@ export default {
       this.scriptTemplateKey = template
       this.editorInitialTemplateKey = template
     }
+    this.applyCopilotScriptDraft()
     this.loadWatchlist()
     this.loadScriptStrategies()
   },
@@ -710,6 +711,47 @@ export default {
     }
   },
   methods: {
+    applyCopilotScriptDraft () {
+      const query = this.$route.query || {}
+      const isScriptDraft = String(query.aiDraft || '') === '1' && String(query.tab || '').toLowerCase() === 'script'
+      if (!isScriptDraft || typeof sessionStorage === 'undefined') return
+      const code = String(sessionStorage.getItem('qd_copilot_script_strategy_code') || '').trim()
+      if (!code) return
+
+      let meta = {}
+      try {
+        meta = JSON.parse(sessionStorage.getItem('qd_copilot_script_strategy_meta') || '{}') || {}
+      } catch (_) {
+        meta = {}
+      }
+
+      this.activeMode = 'script'
+      this.selectedScriptId = undefined
+      this.scriptDraftStrategyId = null
+      this.scriptRuntimeStrategyId = null
+      this.scriptDraftStrategy = null
+      this.scriptCode = code
+      this.scriptName = String(meta.name || '').trim() || this.extractScriptTitleFromCode(code) || this.text.defaultName
+      this.scriptTemplateKey = ''
+      this.scriptTemplateParams = {}
+      this.editorInitialTemplateKey = ''
+      this.scriptVerified = false
+      this.lastSavedScriptSnapshot = ''
+      this.scriptEditorKeySeed += 1
+
+      const market = meta.market || query.market
+      const symbol = meta.symbol || query.symbol
+      if (market) this.runForm.marketCategory = this.normalizeMarket(market)
+      if (symbol) this.runForm.symbol = String(symbol).trim()
+      this.syncSelectedWatchKey()
+    },
+    hasCopilotScriptDraft () {
+      return String((this.$route.query && this.$route.query.aiDraft) || '') === '1' &&
+        String((this.$route.query && this.$route.query.tab) || '').toLowerCase() === 'script' &&
+        !this.scriptDraftStrategyId &&
+        String(this.scriptCode || '').trim() &&
+        String(this.scriptCode || '').trim() !== String(DEFAULT_SCRIPT_CODE || '').trim()
+    },
     handleScriptSaveShortcut (event) {
       if (!event || (!event.ctrlKey && !event.metaKey) || String(event.key || '').toLowerCase() !== 's') return
       if (this.activeMode !== 'script') return
@@ -791,7 +833,7 @@ export default {
         })
         const firstScript = this.scriptStrategies[0]
         const firstId = firstScript && (firstScript.id || firstScript.source_id || firstScript.sourceId)
-        const targetId = queryId || (currentExists ? currentId : firstId)
+        const targetId = queryId || (currentExists ? currentId : (this.hasCopilotScriptDraft() ? null : firstId))
 
         if (targetId && String(targetId) !== String(this.scriptDraftStrategyId || '')) {
           this.selectedScriptId = String(targetId)

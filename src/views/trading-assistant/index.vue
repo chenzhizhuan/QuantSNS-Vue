@@ -2105,6 +2105,11 @@ export default {
       indicatorsLoaded: false, // 闂傚倸鍊风粈渚€骞栭銈囩煋闁哄鍤氬ú顏勭厸闁告粈鐒﹂弲鈺呮⒑閹肩偛鍔撮柛鎾寸懅缁粯瀵肩€涙鍘遍梺闈涱檧缁茶姤淇婇崸妤佺厱闁靛鍎崑銏ゆ煛瀹€瀣瘈鐎规洜鍠栧Λ鍐ㄢ槈濮橆偄鎽嬮梻鍌欐祰椤曟牠宕归婊呯焼濞撴埃鍋撴い銏＄懆缁犳稑鈽夊Ο纰卞斀闂備礁婀遍崕銈夊春閸繍鐒介梺顒€绉甸悡?      editingStrategy: null, // 婵犵數濮甸鏍窗濡ゅ啯宕查柟閭﹀枛缁躲倝鏌﹀Ο渚闁肩増瀵ч妵鍕疀閹炬惌妫ょ紒鎯у綖缁瑩寮婚垾鎰佸悑閹肩补鈧剚娼鹃梺姹囧焺閸ㄦ澘螞濠靛钃熼柨婵嗩槸鎯熼梺闈涱槶閸庣儤瀵奸埀顒勬⒒娴ｅ壊鍚旈柡澶婄仢婵箓姊?      currentEquity: null, // 闂備浇宕甸崰鎰垝鎼淬垺娅犳俊銈呮噹缁犱即鏌涘☉姗堟敾婵炲懐濞€閺岋絽螣濞嗘儳娈紓浣插亾闁告洦鍨遍悡鍐喐濠婂牆绀堥柣鏃堫棑閺?      equityPollingTimer: null, // 闂傚倸鍊风粈渚€骞夐敓鐘插瀭闁绘梻鍘х壕濠氭煙閸撗呭笡闁绘挻娲栭埞鎴︽偐閸欏娅ｅ銈冨劚缁夊綊寮婚敐澶娢ч柛娑卞櫘濡倝姊鸿ぐ鎺濇濠电偐鍋撴繝娈垮枓閸嬫捇姊虹紒妯忣亪鎮樺顑帗鎯旈妸锔规嫼闂佸憡绻傜€氼剟寮抽姀锛勭濠㈣泛顑囬埥澶愭煃?
       aiFilterEnabledUi: false,
       isEditMode: false, // 闂傚倸鍊风粈渚€骞栭銈傚亾濮樺崬鍘寸€规洝顫夌€靛ジ寮堕幋鐘垫毎濠电偠鎻徊钘夛耿闁秴鐓濋柡鍐ㄧ墛閻擄綁鐓崶銊﹀鞍閻犳劏鍓濇穱濠囨倷閹殿喚鐓撻悗娈垮枛閻栫厧鐣锋總鍛婂亜濡炲绨煎鎾绘⒑閻撳海浜柡鍛箞閸┾偓?      supportedIPs: [], // 闂傚倸鍊峰ù鍥儍椤愶箑骞㈡慨妤€妫欓ˉ澶愭⒒娴ｇ瓔鍤冮柛鐘愁殔鐓ら柣鏃堫棑閺嗭箓鏌ㄩ悢鍝勑㈢紒顐㈢Ф缁辨挸顓兼惔婵嬪仐闂佸搫鏈惄顖炵嵁閹烘绠奸柛鎰ㄦ櫇閺嗩垶姊?
+      cryptoSymbols: CRYPTO_SYMBOLS,
+      editingStrategy: null,
+      currentEquity: null,
+      equityPollingTimer: null,
+      supportedIPs: [],
       executionModeUi: 'live',
       liveDisclaimerAckUi: false,
       notifySectionExpanded: true,
@@ -6577,6 +6582,71 @@ export default {
           background-clip: border-box !important;
           color: #e0e6ed !important;
           -webkit-text-fill-color: #e0e6ed !important;
+        }
+
+        .status-badge {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.72);
+
+          &.status-running {
+            background: rgba(14, 203, 129, 0.14);
+            border-color: rgba(14, 203, 129, 0.28);
+            color: #52c41a;
+          }
+
+          &.status-stopped {
+            background: rgba(246, 70, 93, 0.14);
+            border-color: rgba(246, 70, 93, 0.3);
+            color: #ff7875;
+          }
+
+          &.status-error {
+            background: rgba(255, 77, 79, 0.14);
+            border-color: rgba(255, 77, 79, 0.3);
+            color: #ff7875;
+          }
+        }
+
+        .strategy-lifecycle-tags {
+          ::v-deep .ant-tag {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.72);
+          }
+
+          ::v-deep .ant-tag-green {
+            background: rgba(82, 196, 26, 0.14);
+            border-color: rgba(82, 196, 26, 0.28);
+            color: #95de64;
+          }
+
+          ::v-deep .ant-tag-orange {
+            background: rgba(250, 173, 20, 0.14);
+            border-color: rgba(250, 173, 20, 0.3);
+            color: #ffd666;
+          }
+
+          ::v-deep .ant-tag-blue {
+            background: rgba(24, 144, 255, 0.14);
+            border-color: rgba(24, 144, 255, 0.3);
+            color: #69c0ff;
+          }
+        }
+
+        .header-right {
+          ::v-deep .ant-btn:not(.ant-btn-primary):not(.ant-btn-danger) {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.14);
+            color: rgba(255, 255, 255, 0.78);
+
+            &:hover,
+            &:focus {
+              background: rgba(255, 255, 255, 0.1);
+              border-color: rgba(250, 173, 20, 0.42);
+              color: #ffd666;
+            }
+          }
         }
 
         .key-stats-grid {

@@ -419,7 +419,7 @@
             @change="handleStrategyTableChange"
           >
             <!-- Strategy ID -->
-            <template slot="strategyId" slot-scope="text, record">
+            <template slot="strategyId" slot-scope="text">
               <span class="id-cell">
                 <span class="mono-id">{{ text }}</span>
                 <a-tooltip :title="$t('common.copy') || 'Copy'">
@@ -1999,8 +1999,8 @@ export default {
               const row = (this.systemStrategies || []).find(s => s.id === record.id)
               if (row && String(row.status || '').toLowerCase() !== 'running') {
                 this.$message.warning(
-                  this.$t('systemOverview.strategyStartNotPersisted')
-                    || '策略未能保持运行，请打开该策略查看运行日志'
+                  this.$t('systemOverview.strategyStartNotPersisted') ||
+                    '策略未能保持运行，请打开该策略查看运行日志'
                 )
               }
             }
@@ -3815,6 +3815,8 @@ export default {
   .ant-input,
   .ant-input-password,
   .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-input-number-input,
   .ant-select-selection,
   .ant-calendar-picker-input {
     background: #141414 !important;
@@ -3823,8 +3825,19 @@ export default {
   }
 
   .ant-input::placeholder,
-  .ant-input-password input::placeholder {
+  .ant-input-password input::placeholder,
+  .ant-input-number-input::placeholder {
     color: #6e7681;
+  }
+
+  .ant-input-number-handler-wrap {
+    background: #1f1f1f;
+    border-left-color: #303030;
+  }
+
+  .ant-input-number-handler {
+    border-color: #303030;
+    color: rgba(255, 255, 255, 0.55);
   }
 
   .ant-input-prefix,
@@ -3838,7 +3851,16 @@ export default {
 
   .current-credits-info,
   .current-vip-info {
-    background: #141414;
+    background: #141414 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .label {
+      color: rgba(255, 255, 255, 0.68) !important;
+    }
+
+    .value {
+      color: var(--primary-color, #1890ff) !important;
+    }
   }
 }
 
